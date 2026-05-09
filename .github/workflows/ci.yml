@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Swift Package
+    runs-on: macos-15
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 构建 iOS Simulator 包
+        run: |
+          swift build --build-tests \
+            --triple arm64-apple-ios18.6-simulator \
+            --sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
+      - name: 运行 iOS Simulator 测试
+        run: |
+          DESTINATION_ID="$(xcrun simctl list devices available --json | python3 -c 'import json, sys; devices = [device for runtime in json.load(sys.stdin)["devices"].values() for device in runtime]; phones = [device for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")]; print(phones[0]["udid"])')"
+          xcodebuild test \
+            -scheme TabBar \
+            -destination "platform=iOS Simulator,id=${DESTINATION_ID}"

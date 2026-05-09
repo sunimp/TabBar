@@ -1,0 +1,38 @@
+name: TabBarDemo
+options:
+  minimumXcodeGenVersion: 2.39.0
+settings:
+  base:
+    SWIFT_VERSION: 5.9
+packages:
+  TabBar:
+    path: ..
+  GradientBlur:
+    url: https://github.com/sunimp/GradientBlur.git
+    version: 0.1.1
+  LookInside-Release:
+    url: https://github.com/LookInsideApp/LookInside-Release.git
+    version: 0.2.0
+targets:
+  TabBarDemo:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: TabBarDemo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunimp.tabbardemo
+        INFOPLIST_FILE: TabBarDemo/Info.plist
+    dependencies:
+      - package: TabBar
+        product: TabBar
+      - package: GradientBlur
+        product: GradientBlur
+      - package: LookInside-Release
+        product: LookInsideServer
+schemes:
+  TabBarDemo:
+    build:
+      targets:
+        TabBarDemo: all

@@ -1,0 +1,33 @@
+{
+  "originHash" : "31fc1d612463988e08d03dec535ebddcc7e6dc5baade8681de0e10cec3425ee3",
+  "pins" : [
+    {
+      "identity" : "gradientblur",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sunimp/GradientBlur.git",
+      "state" : {
+        "revision" : "66c357d26bb03d0e4718afb2e797e293fb394cc4",
+        "version" : "0.1.1"
+      }
+    },
+    {
+      "identity" : "lookinside-release",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/LookInsideApp/LookInside-Release.git",
+      "state" : {
+        "revision" : "35f0e15bf9ab2206ee6c521c736cab793bc26209",
+        "version" : "0.2.0"
+      }
+    },
+    {
+      "identity" : "lottie-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/airbnb/lottie-ios.git",
+      "state" : {
+        "revision" : "0cb03fd7564d27345bcd96144b811e56212949c6",
+        "version" : "4.6.0"
+      }
+    }
+  ],
+  "version" : 3
+}

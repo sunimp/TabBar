@@ -1,0 +1,27 @@
+name: 功能建议
+description: 为 TabBar 提出改进建议。
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题背景
+      description: 这个功能要解决什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 描述你期望的行为或 API。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案
+      description: 你考虑过的其他方案或临时做法。
+    validations:
+      required: false

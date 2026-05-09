@@ -1,0 +1,37 @@
+name: Bug 反馈
+description: 反馈 TabBar 中可复现的问题。
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题摘要
+      description: 发生了什么？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供最小复现步骤或示例工程。
+      placeholder: |
+        1. 创建 TabBarController，并配置 ...
+        2. 点击 ...
+        3. 观察到 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 环境信息
+      placeholder: "TabBar 版本、iOS 版本、Xcode 版本"
+    validations:
+      required: true
