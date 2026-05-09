@@ -8,7 +8,7 @@ TabBar 是一个 UIKit 自定义底部导航组件，提供浮动胶囊布局、
 
 ## 效果预览
 
-| iOS 18+ 亮色 | iOS 18+ 暗色 |
+| iOS 15+ 亮色 | iOS 15+ 暗色 |
 | --- | --- |
 | <img src="Screenshots/ios15+_light.png" alt="iOS 15+ 亮色效果" width="300"> | <img src="Screenshots/ios15+_dark.png" alt="iOS 15+ 暗色效果" width="300"> |
 
