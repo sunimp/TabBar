@@ -5,7 +5,6 @@
 //  Created by Sun on 2026/4/20.
 //
 
-import GradientBlur
 import TabBar
 import UIKit
 
@@ -18,13 +17,6 @@ protocol TabBarDoubleTapHandling: AnyObject {
 }
 
 final class DemoTabBarController: TabBarController, UINavigationControllerDelegate, TabBarControllerDelegate {
-    private let gradientBlurView: GradientBlurView = .init(
-        direction: .bottomToTop,
-        maxBlurRadius: 6,
-        blurScale: 0.5,
-        isTransparent: false
-    )
-
     init() {
         super.init(style: .default)
         delegate = self
@@ -59,8 +51,6 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // 插入到 contentView 和 tabBar 之间
-        view.insertSubview(gradientBlurView, belowSubview: tabBar)
         if #available(iOS 17.0, *) {
             registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (controller: DemoTabBarController, _: UITraitCollection) in
                 controller.synchronizeTheme()
@@ -88,13 +78,11 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        layoutGradientBlur()
     }
 
     func applyStyle(_ style: TabBarStyle) {
         guard self.style != style else { return }
         self.style = style
-        updateGradientTint()
     }
 
     func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
@@ -123,36 +111,4 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
         (viewController as? TabBarDoubleTapHandling)?.handleTabBarDoubleTap()
     }
 
-    // MARK: - Gradient Blur
-
-    private func layoutGradientBlur() {
-        let bounds = view.bounds
-        let edgeEffectHeight = tabBarTotalHeight
-        gradientBlurView.isHidden = edgeEffectHeight <= 0
-        guard edgeEffectHeight > 0 else { return }
-        let edgeEffectFrame = CGRect(
-            x: 0.0,
-            y: bounds.height - edgeEffectHeight,
-            width: bounds.width,
-            height: edgeEffectHeight
-        )
-        // 渐变过渡段最多 40pt，剩余部分作为底部 solid 区域
-        let gradientSize = min(edgeEffectHeight, 40.0)
-        let solidSize = max(0.0, edgeEffectHeight - gradientSize)
-        gradientBlurView.frame = edgeEffectFrame
-        gradientBlurView.update(
-            size: edgeEffectFrame.size,
-            constantHeight: gradientSize + solidSize,
-            startOffset: solidSize
-        )
-        updateGradientTint()
-    }
-
-    private func updateGradientTint() {
-        let tintColor: UIColor = style.isDark
-            ? UIColor(white: 0.0, alpha: 1.0)
-            : UIColor(white: 1.0, alpha: 1.0)
-        let tintAlpha: CGFloat = style.isDark ? 0.4 : 0.6
-        gradientBlurView.updateTint(color: tintColor, alpha: tintAlpha)
-    }
 }
