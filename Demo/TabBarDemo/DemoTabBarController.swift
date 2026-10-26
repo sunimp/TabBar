@@ -29,7 +29,7 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
         super.init(style: .default)
         delegate = self
 
-        let chats = ChatListViewController()
+        let chats = ChatSplitViewController()
         let contacts = ContactsViewController()
         let settings = SettingsViewController()
 
@@ -98,7 +98,8 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
     }
 
     func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
-        navigationController.setNavigationBarHidden(false, animated: animated)
+        let usesSplitNavigation = viewController === self && selectedViewController is ChatSplitViewController
+        navigationController.setNavigationBarHidden(usesSplitNavigation, animated: animated)
         navigationItem.title = viewController === self ? selectedViewController?.title : viewController.title
 
         let isDetail = viewController is ChatDetailViewController

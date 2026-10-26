@@ -43,6 +43,7 @@ private let demoChats: [ChatItem] = {
 }()
 
 final class ChatListViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, TabBarReselectHandling, TabBarDoubleTapHandling {
+    var onSelectChat: ((String, UIColor) -> Void)?
     private let tableView = UITableView(frame: .zero, style: .plain)
 
     override func viewDidLoad() {
@@ -62,7 +63,7 @@ final class ChatListViewController: UIViewController, UITableViewDataSource, UIT
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
@@ -90,8 +91,66 @@ final class ChatListViewController: UIViewController, UITableViewDataSource, UIT
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let chat = demoChats[indexPath.row]
+        if let onSelectChat {
+            onSelectChat(chat.name, chat.color)
+            return
+        }
         let detail = ChatDetailViewController(chatName: chat.name, color: chat.color)
         navigationController?.pushViewController(detail, animated: true)
+    }
+}
+
+final class ChatSplitViewController: UIViewController, UISplitViewControllerDelegate, TabBarReselectHandling, TabBarDoubleTapHandling {
+    private let listViewController = ChatListViewController()
+    private let chatSplitViewController = UISplitViewController(style: .doubleColumn)
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        chatSplitViewController.delegate = self
+        chatSplitViewController.preferredDisplayMode = .oneBesideSecondary
+        chatSplitViewController.setViewController(UINavigationController(rootViewController: listViewController), for: .primary)
+        chatSplitViewController.setViewController(
+            UINavigationController(rootViewController: ChatDetailViewController(chatName: "通知", color: .systemBlue)),
+            for: .secondary
+        )
+
+        addChild(chatSplitViewController)
+        chatSplitViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(chatSplitViewController.view)
+        NSLayoutConstraint.activate([
+            chatSplitViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
+            chatSplitViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            chatSplitViewController.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            chatSplitViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        chatSplitViewController.didMove(toParent: self)
+
+        listViewController.onSelectChat = { [weak self] name, color in
+            self?.showChat(name: name, color: color)
+        }
+        title = listViewController.title
+    }
+
+    func splitViewController(_: UISplitViewController, collapseSecondary _: UIViewController, onto _: UIViewController) -> Bool {
+        true
+    }
+
+    func handleTabBarReselect() {
+        listViewController.handleTabBarReselect()
+    }
+
+    func handleTabBarDoubleTap() {
+        listViewController.handleTabBarDoubleTap()
+    }
+
+    private func showChat(name: String, color: UIColor) {
+        let detail = ChatDetailViewController(chatName: name, color: color)
+        if chatSplitViewController.traitCollection.horizontalSizeClass == .compact {
+            listViewController.navigationController?.pushViewController(detail, animated: true)
+        } else {
+            chatSplitViewController.setViewController(UINavigationController(rootViewController: detail), for: .secondary)
+        }
     }
 }
 
