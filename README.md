@@ -16,12 +16,17 @@ TabBar 是一个 UIKit 自定义底部导航组件，提供浮动胶囊布局、
 | --- | --- |
 | <img src="Screenshots/ios26+_light.png" alt="iOS 26+ 亮色效果" width="300"> | <img src="Screenshots/ios26+_dark.png" alt="iOS 26+ 暗色效果" width="300"> |
 
+| iPhone Duo 闭合外屏 | iPhone Duo 展开内屏 |
+| --- | --- |
+| <img src="Screenshots/iphone-duo-closed.png" alt="iPhone Duo 闭合外屏效果" width="300"> | <img src="Screenshots/iphone-duo-open.png" alt="iPhone Duo 展开内屏效果" width="300"> |
+
 ## 特性
 
 - 适用于 UIKit App 的浮动胶囊式 TabBar。
 - 液态选中指示器和玻璃背景渲染。
 - 支持未读数和短文本角标。
 - 支持静态 `UIImage` 图标和 Lottie 动画图标。
+- 适配 iPhone Duo 的侧边纵向 TabBar 和展开后的双栏布局。
 - 提供选中、重选、双击、长按等代理回调。
 - 内置亮色和暗色样式，并支持自定义颜色。
 
@@ -118,6 +123,8 @@ final class HomeController: TabBarControllerDelegate {
 ## Demo
 
 打开 `Demo/TabBarDemo.xcodeproj`，运行 `TabBarDemo` scheme。
+
+iPhone Duo 截图使用 Xcode Device Hub 验证；闭合外屏显示侧边纵向 TabBar，展开内屏显示会话列表和详情双栏。
 
 如果需要重新生成 demo 工程文件，使用 XcodeGen：
 
