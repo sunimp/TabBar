@@ -397,14 +397,17 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     private func updateTabBarFrame() {
         let bounds = view.bounds
         let reservedFrames: [CGRect]
+        let occlusionFrames: [CGRect]
         #if compiler(>=6.4)
         if #available(iOS 27.1, *) {
-            reservedFrames = (view.reservedRegions(kind: .occlusion) + view.reservedRegions(kind: .division))
-                .filter(\.isActive).map(\.frame)
+            occlusionFrames = view.reservedRegions(kind: .occlusion).filter(\.isActive).map(\.frame)
+            reservedFrames = (occlusionFrames + view.reservedRegions(kind: .division).filter(\.isActive).map(\.frame))
         } else {
+            occlusionFrames = []
             reservedFrames = []
         }
         #else
+        occlusionFrames = []
         reservedFrames = []
         #endif
         if tabBar.isVertical {
@@ -420,10 +423,7 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             let width = min(56, max(0, available.width))
             let bottomInset = min(16, max(0, available.height - 44))
             let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height - bottomInset))
-            // Reserved regions may split the content area, but must not pull the
-            // vertical bar away from the system-selected display edge.
-            let edgeInset: CGFloat = 16
-            let x = isLeft ? bounds.minX + edgeInset : bounds.maxX - width - edgeInset
+            let x = Self.verticalBarX(in: bounds, width: width, occlusionFrames: occlusionFrames, isLeft: isLeft)
             // Duo places the tab bar below the toolbar in the vertical control rail.
             let y = available.maxY - height - bottomInset
             tabBar.frame = CGRect(x: isTabBarHidden ? (isLeft ? -width : bounds.maxX) : x,
@@ -451,6 +451,19 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             height: tabBarHeight
         )
         tabBar.frame = Self.availableBarRegion(in: proposed, avoiding: reservedFrames, vertical: false, isLeft: false)
+    }
+
+    /// Align the vertical bar with the camera/occlusion center when Duo exposes it.
+    static func verticalBarX(in bounds: CGRect, width: CGFloat, occlusionFrames: [CGRect], isLeft: Bool) -> CGFloat {
+        let edge = isLeft ? bounds.minX : bounds.maxX
+        let candidates = occlusionFrames.filter { frame in
+            isLeft ? frame.midX < bounds.midX : frame.midX > bounds.midX
+        }
+        if let occlusion = candidates.min(by: { abs($0.midX - edge) < abs($1.midX - edge) }) {
+            return occlusion.midX - width * 0.5
+        }
+        let edgeInset: CGFloat = 16
+        return isLeft ? bounds.minX + edgeInset : bounds.maxX - width - edgeInset
     }
 
     /// 按系统保留区域切分候选矩形，选择能容纳控件且最接近系统栏位置的区域。

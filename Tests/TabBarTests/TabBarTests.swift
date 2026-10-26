@@ -74,6 +74,16 @@ private func descendants(of view: UIView) -> [UIView] {
     #expect(regions.allSatisfy { !result.intersects($0) })
 }
 
+@Test func verticalBarAlignsWithCameraOcclusionCenter() {
+    let bounds = CGRect(x: 0, y: 0, width: 760, height: 500)
+    let width: CGFloat = 56
+    let rightCamera = CGRect(x: 704, y: 430, width: 32, height: 32)
+    let leftCamera = CGRect(x: 24, y: 430, width: 32, height: 32)
+
+    #expect(TabBarController.verticalBarX(in: bounds, width: width, occlusionFrames: [rightCamera], isLeft: false) == 692)
+    #expect(TabBarController.verticalBarX(in: bounds, width: width, occlusionFrames: [leftCamera], isLeft: true) == 12)
+}
+
 @MainActor
 @Test func controllerPreservesCallerInsetsWhenHidingAndSwitchingTabs() {
     let controller = TabBarController()
