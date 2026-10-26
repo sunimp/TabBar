@@ -48,6 +48,7 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         var selectedIndex: Int?
         /// TabBarView 在父视图中的外部 insets，用于 LiquidLens 的溢出计算。
         var outerInsets: UIEdgeInsets
+        var isVertical: Bool = false
     }
 
     /// 毛玻璃背景容器（iOS 26+ 使用 UIGlassContainerEffect，低版本使用普通 UIView）。
@@ -118,6 +119,10 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         pendingDoubleTapItem?.timer.invalidate()
     }
 
+    func deferSelection(to scrollRecognizer: UIGestureRecognizer) {
+        tabSelectionRecognizer?.require(toFail: scrollRecognizer)
+    }
+
     /// 允许 TabSelectionRecognizer 和 UILongPressGestureRecognizer 同时识别。
     func gestureRecognizer(_: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer) -> Bool {
         true
@@ -136,10 +141,14 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
     ///   - transition: 动画配置。
     /// - Returns: 实际内容尺寸。
     func update(items: [Item], params: Params, availableSize: CGSize, transition: ViewTransition) -> CGSize {
-        let availableSize = CGSize(width: min(500.0, availableSize.width), height: availableSize.height)
+        let availableSize = CGSize(width: params.isVertical ? availableSize.width : min(500.0, availableSize.width), height: availableSize.height)
 
         // items 变更时清理双击等待状态和手势状态
         cleanupPendingStateIfNeeded(newItems: items)
+        if self.params?.isVertical != params.isVertical {
+            tabSelectionRecognizer?.state = .cancelled
+            selectionGestureState = nil
+        }
 
         let previousParams = self.params
         self.items = items
@@ -157,7 +166,9 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         )
 
         let contentWidth = innerInset * 2.0 + totalItemsWidth
-        let tabsSize = CGSize(width: min(availableSize.width, contentWidth), height: itemHeight + innerInset * 2.0)
+        let tabsSize = params.isVertical
+            ? CGSize(width: availableSize.width, height: itemHeight * CGFloat(items.count) + innerInset * 2)
+            : CGSize(width: min(availableSize.width, contentWidth), height: itemHeight + innerInset * 2.0)
 
         // 2. 布局所有 item 视图
         let selectionFrame = layoutItemViews(
@@ -184,8 +195,11 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         )
         liquidLensView.update(
             size: tabsSize,
-            selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0),
-            selectionSize: CGSize(width: lensSelection.width, height: tabsSize.height),
+            cornerRadius: min(tabsSize.width, tabsSize.height) * 0.5,
+            selectionOrigin: params.isVertical ? CGPoint(x: 0, y: lensSelection.x) : CGPoint(x: lensSelection.x, y: 0.0),
+            selectionSize: params.isVertical
+                ? CGSize(width: tabsSize.width, height: lensSelection.width)
+                : CGSize(width: lensSelection.width, height: tabsSize.height),
             inset: innerInset,
             outerInsets: params.outerInsets,
             isDark: params.theme.isDark,
@@ -272,7 +286,7 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
 
         for (index, item) in items.enumerated() {
             validIds.append(item.id)
-            let itemSize = CGSize(width: itemWidths[index], height: itemHeight)
+            let itemSize = CGSize(width: params.isVertical ? tabsSize.width - innerInset * 2 : itemWidths[index], height: itemHeight)
 
             // 复用或创建未选中态视图
             let isNew: Bool
@@ -313,10 +327,19 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
             // 更新两套视图的内容
             itemView.update(item: item.tabBarItem, theme: params.theme, isSelected: false, availableSize: itemSize, transition: itemTransition)
             selectedView.update(item: item.tabBarItem, theme: params.theme, isSelected: true, availableSize: itemSize, transition: itemTransition)
+            itemView.isAccessibilityElement = true
+            itemView.accessibilityIdentifier = item.tabBarItem.accessibilityIdentifier
+            itemView.accessibilityLabel = item.tabBarItem.title.isEmpty ? item.tabBarItem.id : item.tabBarItem.title
+            itemView.accessibilityValue = item.tabBarItem.badgeValue
+            itemView.accessibilityTraits = isItemSelected ? [.button, .selected] : [.button]
+            itemView.onAccessibilityActivate = { item.action(false) }
+            selectedView.accessibilityElementsHidden = true
 
             // 计算 frame
-            let itemFrame = CGRect(origin: CGPoint(x: nextItemX, y: floor((tabsSize.height - itemSize.height) * 0.5)), size: itemSize)
-            nextItemX += itemSize.width
+            let itemFrame = CGRect(origin: params.isVertical
+                ? CGPoint(x: innerInset, y: nextItemX)
+                : CGPoint(x: nextItemX, y: floor((tabsSize.height - itemSize.height) * 0.5)), size: itemSize)
+            nextItemX += params.isVertical ? itemSize.height : itemSize.width
             if isItemSelected { selectionFrame = itemFrame }
 
             // 设置 frame 和 scale
@@ -356,13 +379,15 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
             result = (gesture.currentX, gesture.itemWidth + innerInset * 2.0)
         } else if let sf = selectionFrame {
             // 正常状态：lens 对齐选中 item
-            result = (sf.minX - innerInset, sf.width + innerInset * 2.0)
+            result = (params?.isVertical == true ? sf.minY - innerInset : sf.minX - innerInset,
+                      (params?.isVertical == true ? sf.height : sf.width) + innerInset * 2.0)
         } else {
             // 兜底：无选中时的默认位置
             result = (0.0, 56.0)
         }
         // clamp 到有效范围
-        result.x = max(0.0, min(result.x, tabsSize.width - result.width))
+        let length = params?.isVertical == true ? tabsSize.height : tabsSize.width
+        result.x = max(0.0, min(result.x, length - result.width))
         return result
     }
 
@@ -399,14 +424,16 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
                     pendingDoubleTapItem = nil
                     pending.timer.invalidate()
                 }
-                let startX = itemView.frame.minX - 4.0
-                selectionGestureState = (startX, startX, itemView.bounds.width, itemId)
+                let vertical = params?.isVertical == true
+                let startX: CGFloat = (vertical ? itemView.frame.minY : itemView.frame.minX) - 4.0
+                selectionGestureState = (startX, startX, vertical ? itemView.bounds.height : itemView.bounds.width, itemId)
                 onNeedsUpdate?(.spring(duration: 0.4))
             }
         case .changed:
             // 拖拽过程中更新 lens 位置
             if var state = selectionGestureState {
-                state.currentX = state.startX + recognizer.translation(in: self).x
+                let translation = recognizer.translation(in: self)
+                state.currentX = state.startX + (params?.isVertical == true ? translation.y : translation.x)
                 if let itemId = itemId(at: recognizer.location(in: self)) {
                     state.itemId = itemId
                 }
@@ -463,7 +490,7 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         var closest: (AnyHashable, CGFloat)?
         for (id, view) in itemContentViews {
             if view.frame.contains(point) { return id }
-            let dist = abs(point.x - view.center.x)
+            let dist = params?.isVertical == true ? abs(point.y - view.center.y) : abs(point.x - view.center.x)
             if closest == nil || dist < closest!.1 { closest = (id, dist) }
         }
         return closest?.0
@@ -478,6 +505,14 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
 /// 一个用于选中态（放在 LiquidLens 的 selectedContentView 中）。
 /// 两者通过 LiquidLens 的 mask 机制自动切换显示区域。
 final class TabBarItemContentView: UIView {
+    var onAccessibilityActivate: (() -> Void)?
+
+    override func accessibilityActivate() -> Bool {
+        guard let onAccessibilityActivate else { return false }
+        onAccessibilityActivate()
+        return true
+    }
+
     /// 上下文菜单的容器视图，长按时提取此视图用于预览。
     let contextContainerView = ContextExtractedContentContainingView()
 

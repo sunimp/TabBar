@@ -9,6 +9,87 @@
 import Testing
 import UIKit
 
+@MainActor
+@Test func nativeGlassUpdatesAppearanceWithoutChangingGeometry() {
+    guard #available(iOS 26.0, *) else { return }
+    let glass = GlassBackgroundView()
+    for isDark in [false, true, false] {
+        glass.update(size: CGSize(width: 64, height: 180), cornerRadius: 32,
+                     isDark: isDark, tintColor: .init(kind: .panel), transition: .immediate)
+        let effects = descendants(of: glass).compactMap { $0 as? UIVisualEffectView }
+        #expect(!effects.isEmpty)
+        #expect(effects.allSatisfy { $0.overrideUserInterfaceStyle == (isDark ? .dark : .light) })
+    }
+}
+
+@MainActor
+private func descendants(of view: UIView) -> [UIView] {
+    view.subviews.flatMap { [$0] + descendants(of: $0) }
+}
+
+@MainActor
+@Test func verticalContentKeepsItemsUprightAndPreservesSelection() {
+    let content = TabBarContentView()
+    var activated: [Int] = []
+    let items = makeItems(count: 3).enumerated().map { index, item in
+        TabBarContentView.Item(tabBarItem: item, action: { _ in activated.append(index) },
+                               doubleTapAction: nil, contextAction: nil)
+    }
+    for vertical in [false, true, false] {
+        let size = content.update(items: items,
+                                 params: .init(theme: .dark, selectedIndex: 1, outerInsets: .zero, isVertical: vertical),
+                                 availableSize: CGSize(width: vertical ? 64 : 360, height: 300),
+                                 transition: .immediate)
+        #expect(size.height == (vertical ? 176 : 64))
+        let accessibleItems = descendants(of: content).compactMap { $0 as? TabBarItemContentView }.filter(\.isAccessibilityElement)
+        #expect(accessibleItems.count == 3)
+        let selected = accessibleItems.first { $0.accessibilityTraits.contains(.selected) }
+        #expect(selected?.accessibilityLabel == "Tab 1")
+        #expect(selected?.transform == .identity)
+        #expect(selected?.accessibilityActivate() == true)
+        if vertical {
+            #expect(Set(accessibleItems.map { $0.frame.minY }).count == 3)
+            #expect(accessibleItems.allSatisfy { $0.frame.width == 56 && $0.frame.height == 56 })
+        }
+    }
+    #expect(activated == [1, 1, 1])
+}
+
+@MainActor
+@Test func barLayoutAvoidsCameraAndFoldWithoutCoveringReservedRegions() {
+    let bounds = CGRect(x: 8, y: 8, width: 700, height: 500)
+    let regions = [CGRect(x: 620, y: 0, width: 100, height: 100),
+                   CGRect(x: 340, y: 0, width: 40, height: 520)]
+    for left in [true, false] {
+        let result = TabBarController.availableBarRegion(in: bounds, avoiding: regions, vertical: true, isLeft: left)
+        #expect(bounds.contains(result))
+        #expect(result.width >= 64 && result.height >= 176)
+        #expect(regions.allSatisfy { !result.intersects($0) })
+        #expect(left ? result.minX == bounds.minX : result.maxX == bounds.maxX)
+    }
+    let bottom = CGRect(x: 8, y: 440, width: 700, height: 64)
+    let result = TabBarController.availableBarRegion(in: bottom, avoiding: regions, vertical: false, isLeft: false)
+    #expect(result.height == 64)
+    #expect(regions.allSatisfy { !result.intersects($0) })
+}
+
+@MainActor
+@Test func controllerPreservesCallerInsetsWhenHidingAndSwitchingTabs() {
+    let controller = TabBarController()
+    let children = makeViewControllers(count: 2)
+    let original = UIEdgeInsets(top: 3, left: 5, bottom: 7, right: 9)
+    children[0].additionalSafeAreaInsets = original
+    let window = attachToWindow(controller)
+    controller.setViewControllers(children, items: makeItems(count: 2))
+    controller.view.layoutIfNeeded()
+    controller.setTabBarHidden(true, animated: false)
+    #expect(children[0].additionalSafeAreaInsets == original)
+    controller.setTabBarHidden(false, animated: false)
+    controller.selectedIndex = 1
+    #expect(children[0].additionalSafeAreaInsets == original)
+    withExtendedLifetime(window) {}
+}
+
 @Test func stylePresetsExposeDistinctLightAndDarkDefaults() {
     let light = TabBarStyle.default
     let dark = TabBarStyle.dark

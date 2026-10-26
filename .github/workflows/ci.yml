@@ -12,21 +12,40 @@ concurrency:
 
 jobs:
   package:
-    name: Swift Package
-    runs-on: macos-15
+    name: Package and Demo (Xcode ${{ matrix.xcode }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            xcode: "26.3"
+          - runner: macos-26
+            xcode: "26.6"
+    runs-on: ${{ matrix.runner }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
     steps:
       - name: 拉取代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: 构建 iOS Simulator 包
+      - name: 检查工具链
         run: |
-          swift build --build-tests \
-            --triple arm64-apple-ios18.6-simulator \
-            --sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
 
       - name: 运行 iOS Simulator 测试
         run: |
           DESTINATION_ID="$(xcrun simctl list devices available --json | python3 -c 'import json, sys; devices = [device for runtime in json.load(sys.stdin)["devices"].values() for device in runtime]; phones = [device for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")]; print(phones[0]["udid"])')"
           xcodebuild test \
             -scheme TabBar \
-            -destination "platform=iOS Simulator,id=${DESTINATION_ID}"
+            -destination "platform=iOS Simulator,id=${DESTINATION_ID}" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: 构建 Demo
+        run: |
+          xcodebuild build \
+            -project Demo/TabBarDemo.xcodeproj \
+            -scheme TabBarDemo \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO

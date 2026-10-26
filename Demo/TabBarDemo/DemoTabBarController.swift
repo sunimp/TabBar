@@ -40,7 +40,7 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
                 animation: TabBarItemAnimation(name: "TabChats")
             ),
             TabBarItem(
-                title: "",
+                title: "联系人",
                 animation: TabBarItemAnimation(name: "TabContacts")
             ),
             TabBarItem(
@@ -61,6 +61,29 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
         super.viewDidLoad()
         // 插入到 contentView 和 tabBar 之间
         view.insertSubview(gradientBlurView, belowSubview: tabBar)
+        if #available(iOS 17.0, *) {
+            registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (controller: DemoTabBarController, _: UITraitCollection) in
+                controller.synchronizeTheme()
+            }
+        }
+        updateNavigationTitle()
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        synchronizeTheme()
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if #unavailable(iOS 17.0), previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+            synchronizeTheme()
+        }
+    }
+
+    func synchronizeTheme() {
+        let traits = view.window?.traitCollection ?? traitCollection
+        applyStyle(DemoThemeController.shared.tabBarTheme(for: traits))
     }
 
     override func viewDidLayoutSubviews() {
@@ -69,16 +92,26 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
     }
 
     func applyStyle(_ style: TabBarStyle) {
+        guard self.style != style else { return }
         self.style = style
         updateGradientTint()
     }
 
     func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
-        let isRoot = viewController === self
-        navigationController.setNavigationBarHidden(isRoot, animated: animated)
+        navigationController.setNavigationBarHidden(false, animated: animated)
+        navigationItem.title = viewController === self ? selectedViewController?.title : viewController.title
 
         let isDetail = viewController is ChatDetailViewController
         setTabBarEnabled(!isDetail, animated: animated)
+    }
+
+    func tabBarController(_: TabBarController, didSelect _: UIViewController, at _: Int) {
+        updateNavigationTitle()
+    }
+
+    private func updateNavigationTitle() {
+        selectedViewController?.loadViewIfNeeded()
+        navigationItem.title = selectedViewController?.title
     }
 
     func tabBarController(_: TabBarController, didReselect viewController: UIViewController, at _: Int) {
@@ -94,6 +127,7 @@ final class DemoTabBarController: TabBarController, UINavigationControllerDelega
     private func layoutGradientBlur() {
         let bounds = view.bounds
         let edgeEffectHeight = tabBarTotalHeight
+        gradientBlurView.isHidden = edgeEffectHeight <= 0
         guard edgeEffectHeight > 0 else { return }
         let edgeEffectFrame = CGRect(
             x: 0.0,

@@ -91,7 +91,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let tabBar = DemoTabBarController()
         tabBarController = tabBar
         let nav = UINavigationController(rootViewController: tabBar)
-        nav.isNavigationBarHidden = true
+        nav.navigationBar.prefersLargeTitles = true
         nav.delegate = tabBar
         window?.rootViewController = nav
 
@@ -107,6 +107,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.makeKeyAndVisible()
     }
 
+    func sceneDidBecomeActive(_: UIScene) {
+        applyTheme()
+    }
+
     func sceneDidDisconnect(_: UIScene) {
         if let themeObserver {
             NotificationCenter.default.removeObserver(themeObserver)
@@ -119,6 +123,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         window.overrideUserInterfaceStyle = DemoThemeController.shared.interfaceStyle
-        tabBarController?.applyStyle(DemoThemeController.shared.tabBarTheme(for: window.traitCollection))
+        tabBarController?.synchronizeTheme()
     }
 }

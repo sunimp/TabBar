@@ -44,6 +44,16 @@ public extension TabBarViewDelegate {
 /// 负责 TabBar 的渲染和交互，内部通过 `TabBarContentView` 管理具体的布局和动画。
 /// 通常由 `TabBarController` 持有和管理，也可以独立使用。
 public final class TabBarView: UIView {
+    /// 由容器根据系统建议的栏位置设置；独立使用时从自身 traits 解析。
+    var isVertical: Bool {
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *) {
+            return traitCollection.verticalBarEdge != .unspecified
+        }
+        #endif
+        return false
+    }
+
     /// 最小底部间距。
     private static let minimumBottomInset: CGFloat = 8.0
     /// 单个 tab 项的高度。
@@ -105,11 +115,14 @@ public final class TabBarView: UIView {
     }
 
     override public var intrinsicContentSize: CGSize {
-        CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
+        isVertical
+            ? CGSize(width: 64, height: CGFloat(items.count) * Self.itemHeight + 8)
+            : CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
     }
 
     /// 核心内容视图，负责所有 tab 项的布局、渲染和手势处理。
     private let tabBarContentView = TabBarContentView()
+    private let scrollView = UIScrollView()
     /// 上一次 `TabBarContentView.update()` 返回的实际尺寸。
     private var tabBarContentSize: CGSize = .zero
     /// 是否需要在下次 layout 时使用动画更新选中状态。
@@ -120,7 +133,20 @@ public final class TabBarView: UIView {
         super.init(frame: .zero)
         backgroundColor = .clear
 
-        addSubview(tabBarContentView)
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.clipsToBounds = false
+        addSubview(scrollView)
+        scrollView.addSubview(tabBarContentView)
+        tabBarContentView.deferSelection(to: scrollView.panGestureRecognizer)
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *) {
+            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (view: TabBarView, _: UITraitCollection) in
+                view.invalidateIntrinsicContentSize()
+                view.setNeedsLayout()
+            }
+        }
+        #endif
         // TabBarContentView 在手势交互时会主动请求更新（如拖拽切换 tab）
         tabBarContentView.onNeedsUpdate = { [weak self] transition in
             self?.performUpdate(transition: transition)
@@ -194,7 +220,10 @@ public final class TabBarView: UIView {
         let params = TabBarContentView.Params(
             theme: style,
             selectedIndex: items.indices.contains(selectedIndex) ? selectedIndex : nil,
-            outerInsets: UIEdgeInsets(top: 0.0, left: frame.origin.x, bottom: 0.0, right: frame.origin.x)
+            outerInsets: isVertical
+                ? UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+                : UIEdgeInsets(top: 0.0, left: frame.origin.x, bottom: 0.0, right: frame.origin.x),
+            isVertical: isVertical
         )
 
         tabBarContentSize = tabBarContentView.update(
@@ -208,9 +237,16 @@ public final class TabBarView: UIView {
             invalidateIntrinsicContentSize()
         }
 
+        scrollView.frame = bounds
+        scrollView.isScrollEnabled = isVertical && tabBarContentSize.height > bounds.height
+        scrollView.clipsToBounds = scrollView.isScrollEnabled
+        scrollView.contentSize = tabBarContentSize
+        if !scrollView.isScrollEnabled {
+            scrollView.contentOffset = .zero
+        }
         tabBarContentView.frame = CGRect(
             x: floor((bounds.width - tabBarContentSize.width) * 0.5),
-            y: max(0.0, bounds.height - tabBarContentSize.height),
+            y: isVertical ? 0 : max(0.0, bounds.height - tabBarContentSize.height),
             width: tabBarContentSize.width,
             height: tabBarContentSize.height
         )

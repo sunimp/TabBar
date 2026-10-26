@@ -74,16 +74,13 @@ private let demoSections: [ContactSection] = [
 ]
 
 final class ContactsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, TabBarReselectHandling {
-    private let navBar = NavigationBarView()
     private let tableView = UITableView(frame: .zero, style: .plain)
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        navBar.title = "联系人"
-        navBar.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(navBar)
+        title = "联系人"
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -94,11 +91,7 @@ final class ContactsViewController: UIViewController, UITableViewDataSource, UIT
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
-            navBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
-            tableView.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),

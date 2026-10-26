@@ -12,7 +12,7 @@ packages:
     version: 0.1.1
   LookInside-Release:
     url: https://github.com/LookInsideApp/LookInside-Release.git
-    version: 0.2.0
+    version: 0.2.4
 targets:
   TabBarDemo:
     type: application

@@ -437,6 +437,8 @@ final class GlassBackgroundView: UIView {
 
     /// 更新 native / legacy 视图的形状和尺寸。
     private func updateShapeAndSize(shape: Shape, size: CGSize, isDark: Bool, tintColor: TintColor, isVisible: Bool, transition: ViewTransition) {
+        // 外观变化不依赖几何变化，否则同尺寸切换主题会保留旧 override。
+        nativeView?.overrideUserInterfaceStyle = isDark ? .dark : .light
         if let nativeView = nativeView, let nativeViewClippingContext = nativeViewClippingContext, nativeView.bounds.size != size || nativeViewClippingContext.shape != shape {
             nativeViewClippingContext.update(shape: shape, size: size, transition: transition)
             if transition.animation.isImmediate {
@@ -447,7 +449,6 @@ final class GlassBackgroundView: UIView {
                     nativeView.frame = nativeFrame
                 }
             }
-            nativeView.overrideUserInterfaceStyle = isDark ? .dark : .light
         }
         if let legacyView = legacyView {
             switch shape {

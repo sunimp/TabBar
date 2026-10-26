@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/LookInsideApp/LookInside-Release.git",
       "state" : {
-        "revision" : "35f0e15bf9ab2206ee6c521c736cab793bc26209",
-        "version" : "0.2.0"
+        "revision" : "7c0852b80c379b5bb2f88d34dc25731330a99d33",
+        "version" : "0.2.4"
       }
     },
     {

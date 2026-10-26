@@ -82,6 +82,8 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     private let contentView = UIView()
     /// TabBar 是否处于隐藏状态。
     private var isTabBarHidden = false
+    private weak var insetViewController: UIViewController?
+    private var appliedInsets: UIEdgeInsets = .zero
 
     public init(style: TabBarStyle = .default) {
         tabBar = TabBarView(style: style)
@@ -109,12 +111,24 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *) {
+            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (controller: TabBarController, _: UITraitCollection) in
+                controller.view.setNeedsLayout()
+            }
+        }
+        #endif
     }
 
     override open func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateTabBarFrame()
         updateSelectedChildInsets()
+    }
+
+    override open func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        view.setNeedsLayout()
     }
 
     // MARK: - 公共方法
@@ -330,18 +344,47 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     /// 确保子控制器的内容不会被 TabBar 遮挡。
     /// 计算方式：TabBar 总高度 - 系统 safeAreaInsets.bottom（避免重复计算）。
     private func updateSelectedChildInsets() {
+        if insetViewController !== selectedViewController {
+            if let previous = insetViewController {
+                var insets = previous.additionalSafeAreaInsets
+                insets.left -= appliedInsets.left
+                insets.right -= appliedInsets.right
+                insets.bottom -= appliedInsets.bottom
+                previous.additionalSafeAreaInsets = insets
+            }
+            insetViewController = selectedViewController
+            appliedInsets = .zero
+        }
         guard let selectedViewController else {
             return
         }
-        let bottomInset = max(0.0, tabBarTotalHeight - view.safeAreaInsets.bottom)
-        selectedViewController.additionalSafeAreaInsets.bottom = bottomInset
+        var required = UIEdgeInsets.zero
+        if !isTabBarHidden {
+            if tabBar.isVertical {
+                if tabBar.frame.midX < view.bounds.midX {
+                    required.left = max(0, tabBar.frame.maxX + 8 - view.safeAreaInsets.left)
+                } else {
+                    required.right = max(0, view.bounds.maxX - tabBar.frame.minX + 8 - view.safeAreaInsets.right)
+                }
+            } else {
+                required.bottom = max(0, view.bounds.maxY - tabBar.frame.minY - view.safeAreaInsets.bottom)
+            }
+        }
+        var insets = selectedViewController.additionalSafeAreaInsets
+        insets.left += required.left - appliedInsets.left
+        insets.right += required.right - appliedInsets.right
+        insets.bottom += required.bottom - appliedInsets.bottom
+        appliedInsets = required
+        if selectedViewController.additionalSafeAreaInsets != insets {
+            selectedViewController.additionalSafeAreaInsets = insets
+        }
     }
 
     /// TabBar 占据的总高度（胶囊高度 + 底部间距），用于子控制器 insets 计算。
     ///
     /// 隐藏状态下返回 0。
     public var tabBarTotalHeight: CGFloat {
-        isTabBarHidden ? 0.0 : (tabBar.contentHeight + tabBarBottomInset)
+        isTabBarHidden || tabBar.isVertical ? 0.0 : (tabBar.contentHeight + tabBarBottomInset)
     }
 
     /// 计算并设置 TabBar 的 frame。
@@ -353,10 +396,38 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     /// 底部空间大时胶囊可以更宽，底部空间小时适当收窄以保持视觉平衡。
     private func updateTabBarFrame() {
         let bounds = view.bounds
+        let reservedFrames: [CGRect]
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *) {
+            reservedFrames = (view.reservedRegions(kind: .occlusion) + view.reservedRegions(kind: .division))
+                .filter(\.isActive).map(\.frame)
+        } else {
+            reservedFrames = []
+        }
+        #else
+        reservedFrames = []
+        #endif
+        if tabBar.isVertical {
+            var isLeft = false
+            #if compiler(>=6.4)
+            if #available(iOS 27.1, *) {
+                let leadingIsLeft = view.effectiveUserInterfaceLayoutDirection != .rightToLeft
+                isLeft = traitCollection.verticalBarEdge == .leading ? leadingIsLeft : !leadingIsLeft
+            }
+            #endif
+            let safeFrame = view.safeAreaLayoutGuide.layoutFrame.insetBy(dx: 8, dy: 8)
+            let available = Self.availableBarRegion(in: safeFrame, avoiding: reservedFrames, vertical: true, isLeft: isLeft)
+            let width = min(64, max(0, available.width))
+            let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height))
+            let x = isLeft ? available.minX : available.maxX - width
+            tabBar.frame = CGRect(x: isTabBarHidden ? (isLeft ? -width : bounds.maxX) : x,
+                                  y: available.maxY - height, width: width, height: height)
+            return
+        }
         let bottomInset = tabBarBottomInset
         let sideInset: CGFloat = bottomInset <= 28.0 ? 20.0 : 12.0
         let tabBarHeight = tabBar.contentHeight
-        let tabBarWidth = bounds.width - sideInset * 2.0
+        let tabBarWidth = max(0, bounds.width - view.safeAreaInsets.left - view.safeAreaInsets.right - sideInset * 2.0)
         let tabBarY: CGFloat
 
         if isTabBarHidden {
@@ -366,12 +437,40 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             tabBarY = bounds.height - tabBarHeight - bottomInset
         }
 
-        tabBar.frame = CGRect(
-            x: floor((bounds.width - tabBarWidth) * 0.5),
+        let proposed = CGRect(
+            x: view.safeAreaInsets.left + sideInset,
             y: tabBarY,
             width: tabBarWidth,
             height: tabBarHeight
         )
+        tabBar.frame = Self.availableBarRegion(in: proposed, avoiding: reservedFrames, vertical: false, isLeft: false)
+    }
+
+    /// 按系统保留区域切分候选矩形，选择能容纳控件且最接近系统栏位置的区域。
+    static func availableBarRegion(in frame: CGRect, avoiding regions: [CGRect], vertical: Bool, isLeft: Bool) -> CGRect {
+        var candidates = [frame]
+        for region in regions {
+            candidates = candidates.flatMap { candidate -> [CGRect] in
+                let overlap = candidate.intersection(region)
+                guard !overlap.isNull, !overlap.isEmpty else { return [candidate] }
+                return [
+                    CGRect(x: candidate.minX, y: candidate.minY, width: overlap.minX - candidate.minX, height: candidate.height),
+                    CGRect(x: overlap.maxX, y: candidate.minY, width: candidate.maxX - overlap.maxX, height: candidate.height),
+                    CGRect(x: candidate.minX, y: candidate.minY, width: candidate.width, height: overlap.minY - candidate.minY),
+                    CGRect(x: candidate.minX, y: overlap.maxY, width: candidate.width, height: candidate.maxY - overlap.maxY),
+                ].filter { $0.width >= 44 && $0.height >= 44 }
+            }
+        }
+        return candidates.max { lhs, rhs in
+            if vertical {
+                let leftDistance = isLeft ? lhs.minX - frame.minX : frame.maxX - lhs.maxX
+                let rightDistance = isLeft ? rhs.minX - frame.minX : frame.maxX - rhs.maxX
+                if leftDistance != rightDistance { return leftDistance > rightDistance }
+                return lhs.height < rhs.height
+            }
+            if lhs.maxY != rhs.maxY { return lhs.maxY < rhs.maxY }
+            return lhs.width < rhs.width
+        } ?? CGRect(origin: frame.origin, size: .zero)
     }
 
     /// TabBar 底部间距。

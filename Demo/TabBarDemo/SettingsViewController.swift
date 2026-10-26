@@ -54,7 +54,6 @@ private func makeDemoSettings(themeMode: DemoThemeMode) -> [SettingsSection] {
 }
 
 final class SettingsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, TabBarReselectHandling {
-    private let navBar = NavigationBarView()
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
 
     private var settingsSections: [SettingsSection] {
@@ -65,9 +64,7 @@ final class SettingsViewController: UIViewController, UITableViewDataSource, UIT
         super.viewDidLoad()
         view.backgroundColor = .systemGroupedBackground
 
-        navBar.title = "设置"
-        navBar.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(navBar)
+        title = "设置"
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -77,11 +74,7 @@ final class SettingsViewController: UIViewController, UITableViewDataSource, UIT
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
-            navBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
-            tableView.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
