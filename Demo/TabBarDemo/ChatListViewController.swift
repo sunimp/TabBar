@@ -121,7 +121,7 @@ final class ChatSplitViewController: UIViewController, UISplitViewControllerDele
         NSLayoutConstraint.activate([
             chatSplitViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
             chatSplitViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            chatSplitViewController.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            chatSplitViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             chatSplitViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         chatSplitViewController.didMove(toParent: self)

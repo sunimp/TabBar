@@ -417,7 +417,7 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             #endif
             let safeFrame = view.safeAreaLayoutGuide.layoutFrame.insetBy(dx: 8, dy: 8)
             let available = Self.availableBarRegion(in: safeFrame, avoiding: reservedFrames, vertical: true, isLeft: isLeft)
-            let width = min(64, max(0, available.width))
+            let width = min(56, max(0, available.width))
             let bottomInset = min(16, max(0, available.height - 44))
             let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height - bottomInset))
             // Reserved regions may split the content area, but must not pull the

@@ -116,7 +116,7 @@ public final class TabBarView: UIView {
 
     override public var intrinsicContentSize: CGSize {
         isVertical
-            ? CGSize(width: 64, height: CGFloat(items.count) * Self.itemHeight + 8)
+            ? CGSize(width: 56, height: CGFloat(items.count) * Self.itemHeight + 8)
             : CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
     }
 
