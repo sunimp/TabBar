@@ -324,9 +324,13 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
             // 新建的视图不使用动画
             let itemTransition: ViewTransition = isNew ? .immediate : transition
 
-            // 更新两套视图的内容
-            itemView.update(item: item.tabBarItem, theme: params.theme, isSelected: false, availableSize: itemSize, transition: itemTransition)
-            selectedView.update(item: item.tabBarItem, theme: params.theme, isSelected: true, availableSize: itemSize, transition: itemTransition)
+            // Duo 纵向控制栏只展示图标，横向 TabBar 保留标题。
+            var displayItem = item.tabBarItem
+            if params.isVertical {
+                displayItem.title = ""
+            }
+            itemView.update(item: displayItem, theme: params.theme, isSelected: false, availableSize: itemSize, transition: itemTransition)
+            selectedView.update(item: displayItem, theme: params.theme, isSelected: true, availableSize: itemSize, transition: itemTransition)
             itemView.isAccessibilityElement = true
             itemView.accessibilityIdentifier = item.tabBarItem.accessibilityIdentifier
             itemView.accessibilityLabel = item.tabBarItem.title.isEmpty ? item.tabBarItem.id : item.tabBarItem.title

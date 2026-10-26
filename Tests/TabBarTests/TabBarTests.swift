@@ -50,6 +50,7 @@ private func descendants(of view: UIView) -> [UIView] {
         if vertical {
             #expect(Set(accessibleItems.map { $0.frame.minY }).count == 3)
             #expect(accessibleItems.allSatisfy { $0.frame.width == 56 && $0.frame.height == 56 })
+            #expect(descendants(of: content).compactMap { $0 as? UILabel }.allSatisfy { $0.isHidden })
         }
     }
     #expect(activated == [1, 1, 1])
