@@ -1,14 +1,21 @@
 # TabBar 项目约定
 
-## iPhone Duo 验证
+## 开发
 
-- Duo 姿态必须使用 Xcode Device Hub 验证，不使用 Simulator 菜单模拟折叠或展开。
-- 纵向 TabBar 贴 leading/trailing 控制轨道边缘，位于 Toolbar 下方、底部系统保留区域上方；不要按整个屏幕 `midY` 居中。
-- 纵向 TabBar 隐藏标题，使用系统 safe area 和 reserved regions 避让摄像头、折叠区域及其他系统控件。
-- 展开内屏使用 `UISplitViewController` 组织会话列表和详情；compact 姿态自动折叠为单列。
-- Demo 的列表、详情和输入栏必须使用 safe area，不能覆盖纵向 TabBar 区域。
+- 跟随现有 Swift/UIKit 风格，优先做最小完整修改。
+- 修改公共 API、工程配置或依赖前，先确认影响范围。
+- 新增或移动代码时同步更新调用方、测试和文档。
+- 未明确要求时，不主动执行构建、测试或运行；执行后如实记录验证范围。
 
-## 截图
+## iPhone Duo
 
-- Duo 截图保存于 `Screenshots/iphone-duo-closed.png` 和 `Screenshots/iphone-duo-open.png`。
-- 更新 Duo 布局后，使用 Device Hub 重新生成闭合外屏和展开内屏截图，并同步更新 `README.md`。
+- 姿态验证使用 Xcode Device Hub，不使用 Simulator 菜单模拟折叠或展开。
+- 纵向 TabBar 贴系统指定的 leading/trailing 控制轨道，位于 Toolbar 下方和底部保留区域上方；禁止按全屏 `midY` 居中。
+- 纵向布局隐藏标题，使用 safe area 和 reserved regions 避让摄像头、折叠区域及系统控件。
+- 展开内屏使用 `UISplitViewController`；compact 姿态自动折叠为单列。
+- Demo 的列表、详情和输入栏必须避让纵向 TabBar。
+
+## 截图与文档
+
+- Duo 截图：`Screenshots/iphone-duo-closed.png`、`Screenshots/iphone-duo-open.png`。
+- Duo 布局变化后，用 Device Hub 重新生成两种姿态截图，并同步更新 `README.md`。
