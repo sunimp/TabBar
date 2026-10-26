@@ -419,9 +419,14 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             let available = Self.availableBarRegion(in: safeFrame, avoiding: reservedFrames, vertical: true, isLeft: isLeft)
             let width = min(64, max(0, available.width))
             let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height))
-            let x = isLeft ? available.minX : available.maxX - width
+            // Reserved regions may split the content area, but must not pull the
+            // vertical bar away from the system-selected display edge.
+            let edgeInset: CGFloat = 16
+            let x = isLeft ? bounds.minX + edgeInset : bounds.maxX - width - edgeInset
+            let y = available.midY - height * 0.5
             tabBar.frame = CGRect(x: isTabBarHidden ? (isLeft ? -width : bounds.maxX) : x,
-                                  y: available.maxY - height, width: width, height: height)
+                                  y: isTabBarHidden ? available.maxY : y,
+                                  width: width, height: height)
             return
         }
         let bottomInset = tabBarBottomInset
