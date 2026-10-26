@@ -418,12 +418,14 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             let safeFrame = view.safeAreaLayoutGuide.layoutFrame.insetBy(dx: 8, dy: 8)
             let available = Self.availableBarRegion(in: safeFrame, avoiding: reservedFrames, vertical: true, isLeft: isLeft)
             let width = min(64, max(0, available.width))
-            let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height))
+            let bottomInset = min(16, max(0, available.height - 44))
+            let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height - bottomInset))
             // Reserved regions may split the content area, but must not pull the
             // vertical bar away from the system-selected display edge.
             let edgeInset: CGFloat = 16
             let x = isLeft ? bounds.minX + edgeInset : bounds.maxX - width - edgeInset
-            let y = available.midY - height * 0.5
+            // Duo places the tab bar below the toolbar in the vertical control rail.
+            let y = available.maxY - height - bottomInset
             tabBar.frame = CGRect(x: isTabBarHidden ? (isLeft ? -width : bounds.maxX) : x,
                                   y: isTabBarHidden ? available.maxY : y,
                                   width: width, height: height)
