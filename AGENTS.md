@@ -29,7 +29,7 @@
 
 - 姿态切换使用 Xcode Device Hub，不使用 Simulator.app 菜单。
 - 每次 Duo 布局改动，需在 Device Hub 依次验证：闭合（摄像头右上、右下、左上）、展开竖握、展开横握。
-- 本地复现 CI：`DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer` 执行 README「验证」中的命令。
+- 本地复现 CI：分别以 `DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer` 与 Xcode 27.1 执行 README「验证」中的命令；只有 27.1 会编译 Duo 代码。
 
 ## 截图与文档
 

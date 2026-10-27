@@ -91,7 +91,7 @@ iPhone Duo（Xcode Device Hub）：
 
 ## 验证
 
-CI 在 GitHub Actions 上使用 Xcode 26.3（macos-15）与 Xcode 26.6（macos-26）运行测试并构建 Demo。iPhone Duo 相关代码以 `#if compiler(>=6.4)` 隔离，旧工具链编译时不包含这部分。iPhone Duo 姿态需本地使用 Xcode 27.1+ 的 Device Hub 验证。
+CI 在 GitHub Actions 上使用 Xcode 26.6（macos-26）与 Xcode 27.1（xcode-27，preview 镜像）运行测试并构建 Demo。iPhone Duo 相关代码以 `#if compiler(>=6.4)` 隔离，只有 Xcode 27.1 会编译这部分，26.6 用于确认旧工具链仍可编译。iPhone Duo 姿态需本地使用 Xcode 27.1+ 的 Device Hub 验证。
 
 运行测试：
 

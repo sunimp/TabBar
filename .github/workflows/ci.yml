@@ -17,10 +17,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
-            xcode: "26.3"
+          # 26.6：验证 iPhone Duo 代码（#if compiler(>=6.4)）被排除后，旧工具链仍可编译。
           - runner: macos-26
             xcode: "26.6"
+          # 27.1：唯一编译 iPhone Duo 代码的工具链；xcode-27 镜像目前为 preview。
+          - runner: xcode-27
+            xcode: "27.1"
     runs-on: ${{ matrix.runner }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
