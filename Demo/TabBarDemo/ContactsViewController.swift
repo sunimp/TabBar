@@ -89,10 +89,13 @@ final class ContactsViewController: UIViewController, UITableViewDataSource, UIT
         tableView.sectionIndexColor = UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
+        // 表格嵌套在 TabBarController 内容容器中，系统无法自动识别，需显式声明供导航栏大标题跟随滚动。
+        setContentScrollView(tableView)
 
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            // plain 列表的分割线贴 cell 边缘，需止于 safe area，避免延伸进右侧纵向栏区域。
             tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])

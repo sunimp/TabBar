@@ -20,7 +20,6 @@
 		B6F038034B87A830E0FEAFF4 /* TabChats.json in Resources */ = {isa = PBXBuildFile; fileRef = 43371C8B0533F04FC322085E /* TabChats.json */; };
 		C7C2DA1AB4E62E9CCC1502A7 /* ChatListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0EC327C27E5D848E43A98FE /* ChatListViewController.swift */; };
 		EC4C8D19131F63494C48D00E /* TabSettings.json in Resources */ = {isa = PBXBuildFile; fileRef = 9FC85C0DBCEE75B7A13C6E84 /* TabSettings.json */; };
-		F0BDCEED62113D188B2D3F2C /* NavigationBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12557CAFB5EB3B31C9EA2C8 /* NavigationBarView.swift */; };
 		F37DB548BC2DB7DD75335C4D /* GradientBlur in Frameworks */ = {isa = PBXBuildFile; productRef = 4871189FA02A6BE0132F8430 /* GradientBlur */; };
 /* End PBXBuildFile section */
 
@@ -39,7 +38,6 @@
 		B0EC327C27E5D848E43A98FE /* ChatListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListViewController.swift; sourceTree = "<group>"; };
 		CBC496C8F0ACBBDF4F6B7623 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		CEA9FC3B75B2AA556D5A8279 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		F12557CAFB5EB3B31C9EA2C8 /* NavigationBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,7 +64,6 @@
 				02CB69FAF8D4AB2BCE552A6A /* DemoTabBarController.swift */,
 				62358FD07BAF471B02E3D3F5 /* Info.plist */,
 				CEA9FC3B75B2AA556D5A8279 /* LaunchScreen.storyboard */,
-				F12557CAFB5EB3B31C9EA2C8 /* NavigationBarView.swift */,
 				CBC496C8F0ACBBDF4F6B7623 /* SceneDelegate.swift */,
 				0ADCF86611CAAD61D8F92A52 /* SettingsViewController.swift */,
 				B9DB2C061B3EEDD4B8F5763B /* Animations */,
@@ -193,7 +190,6 @@
 				C7C2DA1AB4E62E9CCC1502A7 /* ChatListViewController.swift in Sources */,
 				4ED546FADDCC062EC85B27E7 /* ContactsViewController.swift in Sources */,
 				31636D3789B132677967DBA6 /* DemoTabBarController.swift in Sources */,
-				F0BDCEED62113D188B2D3F2C /* NavigationBarView.swift in Sources */,
 				2766AA2EB3339795FFFE81EF /* SceneDelegate.swift in Sources */,
 				B3C1D7BD69C5F776AC0E8463 /* SettingsViewController.swift in Sources */,
 			);

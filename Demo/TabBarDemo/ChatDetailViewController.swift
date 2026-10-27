@@ -20,6 +20,7 @@ final class ChatDetailViewController: UIViewController {
         self.color = color
         super.init(nibName: nil, bundle: nil)
         title = chatName
+        navigationItem.largeTitleDisplayMode = .never
     }
 
     @available(*, unavailable)
@@ -64,7 +65,7 @@ final class ChatDetailViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: inputBar.topAnchor),
 

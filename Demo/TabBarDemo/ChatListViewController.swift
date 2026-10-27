@@ -59,10 +59,13 @@ final class ChatListViewController: UIViewController, UITableViewDataSource, UIT
         tableView.separatorInset = UIEdgeInsets(top: 0.0, left: 76.0, bottom: 0.0, right: 0.0)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
+        // 表格嵌套在 TabBarController 内容容器中，系统无法自动识别，需显式声明供导航栏大标题跟随滚动。
+        setContentScrollView(tableView)
 
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            // plain 列表的分割线贴 cell 边缘，需止于 safe area，避免延伸进右侧纵向栏区域。
             tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
@@ -100,57 +103,25 @@ final class ChatListViewController: UIViewController, UITableViewDataSource, UIT
     }
 }
 
-final class ChatSplitViewController: UIViewController, UISplitViewControllerDelegate, TabBarReselectHandling, TabBarDoubleTapHandling {
-    private let listViewController = ChatListViewController()
-    private let chatSplitViewController = UISplitViewController(style: .doubleColumn)
+/// 会话列表 + 详情，布局规则见 `ListDetailSplitViewController`。
+final class ChatSplitViewController: ListDetailSplitViewController, TabBarReselectHandling, TabBarDoubleTapHandling {
+    private let chatList: ChatListViewController
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        chatSplitViewController.delegate = self
-        chatSplitViewController.preferredDisplayMode = .oneBesideSecondary
-        chatSplitViewController.setViewController(UINavigationController(rootViewController: listViewController), for: .primary)
-        chatSplitViewController.setViewController(
-            UINavigationController(rootViewController: ChatDetailViewController(chatName: "通知", color: .systemBlue)),
-            for: .secondary
-        )
-
-        addChild(chatSplitViewController)
-        chatSplitViewController.view.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(chatSplitViewController.view)
-        NSLayoutConstraint.activate([
-            chatSplitViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
-            chatSplitViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            chatSplitViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            chatSplitViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
-        chatSplitViewController.didMove(toParent: self)
-
-        listViewController.onSelectChat = { [weak self] name, color in
-            self?.showChat(name: name, color: color)
+    init() {
+        let list = ChatListViewController()
+        chatList = list
+        super.init(list: list, initialDetail: ChatDetailViewController(chatName: "通知", color: .systemBlue))
+        list.onSelectChat = { [weak self] name, color in
+            self?.showDetail(ChatDetailViewController(chatName: name, color: color))
         }
-        title = listViewController.title
-    }
-
-    func splitViewController(_: UISplitViewController, collapseSecondary _: UIViewController, onto _: UIViewController) -> Bool {
-        true
     }
 
     func handleTabBarReselect() {
-        listViewController.handleTabBarReselect()
+        chatList.handleTabBarReselect()
     }
 
     func handleTabBarDoubleTap() {
-        listViewController.handleTabBarDoubleTap()
-    }
-
-    private func showChat(name: String, color: UIColor) {
-        let detail = ChatDetailViewController(chatName: name, color: color)
-        if chatSplitViewController.traitCollection.horizontalSizeClass == .compact {
-            listViewController.navigationController?.pushViewController(detail, animated: true)
-        } else {
-            chatSplitViewController.setViewController(UINavigationController(rootViewController: detail), for: .secondary)
-        }
+        chatList.handleTabBarDoubleTap()
     }
 }
 
