@@ -44,20 +44,30 @@ public extension TabBarViewDelegate {
 /// 负责 TabBar 的渲染和交互，内部通过 `TabBarContentView` 管理具体的布局和动画。
 /// 通常由 `TabBarController` 持有和管理，也可以独立使用。
 public final class TabBarView: UIView {
-    /// 由容器根据系统建议的栏位置设置；独立使用时从自身 traits 解析。
-    var isVertical: Bool {
-        #if compiler(>=6.4)
-        if #available(iOS 27.1, *) {
-            return traitCollection.verticalBarEdge != .unspecified
+    /// 单个 tab 项的高度。
+    static let itemHeight: CGFloat = 56.0
+    /// 胶囊内边距。
+    static let innerInset: CGFloat = 4.0
+    /// iPhone Duo 纵向控制轨道宽度，与系统纵向栏按钮（48pt，Device Hub 实测）一致。
+    static let verticalBarExtent: CGFloat = 48.0
+    /// 纵向布局单个 tab 项的高度，与轨道宽度一致，使选中指示接近正方形。
+    static let verticalItemHeight: CGFloat = verticalBarExtent
+
+    /// 是否按 iPhone Duo 纵向控制轨道布局。
+    ///
+    /// 由 `TabBarController` 根据系统纵向栏 layout guide 统一设置，避免 trait 与实际 frame 不一致。
+    var isVertical = false {
+        didSet {
+            guard oldValue != isVertical else { return }
+            invalidateIntrinsicContentSize()
+            setNeedsLayout()
         }
-        #endif
-        return false
     }
 
-    /// 最小底部间距。
-    private static let minimumBottomInset: CGFloat = 8.0
-    /// 单个 tab 项的高度。
-    private static let itemHeight: CGFloat = 56.0
+    /// 纵向布局时完整展示所有 item 所需的高度。
+    var verticalContentHeight: CGFloat {
+        CGFloat(items.count) * Self.verticalItemHeight + Self.innerInset * 2.0
+    }
 
     /// 代理，接收交互事件。
     public weak var delegate: TabBarViewDelegate?
@@ -116,7 +126,7 @@ public final class TabBarView: UIView {
 
     override public var intrinsicContentSize: CGSize {
         isVertical
-            ? CGSize(width: 56, height: CGFloat(items.count) * Self.itemHeight + 8)
+            ? CGSize(width: Self.verticalBarExtent, height: verticalContentHeight)
             : CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
     }
 
@@ -139,14 +149,6 @@ public final class TabBarView: UIView {
         addSubview(scrollView)
         scrollView.addSubview(tabBarContentView)
         tabBarContentView.deferSelection(to: scrollView.panGestureRecognizer)
-        #if compiler(>=6.4)
-        if #available(iOS 27.1, *) {
-            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (view: TabBarView, _: UITraitCollection) in
-                view.invalidateIntrinsicContentSize()
-                view.setNeedsLayout()
-            }
-        }
-        #endif
         // TabBarContentView 在手势交互时会主动请求更新（如拖拽切换 tab）
         tabBarContentView.onNeedsUpdate = { [weak self] transition in
             self?.performUpdate(transition: transition)
@@ -273,6 +275,6 @@ public final class TabBarView: UIView {
 
     /// 估算内容高度，在首次 update 之前使用。
     private var estimatedContentHeight: CGFloat {
-        Self.itemHeight + 8.0 // itemHeight(56) + innerInset(4) * 2
+        Self.itemHeight + Self.innerInset * 2.0
     }
 }

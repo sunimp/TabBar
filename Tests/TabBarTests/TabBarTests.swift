@@ -38,9 +38,9 @@ private func descendants(of view: UIView) -> [UIView] {
     for vertical in [false, true, false] {
         let size = content.update(items: items,
                                  params: .init(theme: .dark, selectedIndex: 1, outerInsets: .zero, isVertical: vertical),
-                                 availableSize: CGSize(width: vertical ? 64 : 360, height: 300),
+                                 availableSize: CGSize(width: vertical ? TabBarView.verticalBarExtent : 360, height: 300),
                                  transition: .immediate)
-        #expect(size.height == (vertical ? 176 : 64))
+        #expect(size.height == (vertical ? 152 : 64))
         let accessibleItems = descendants(of: content).compactMap { $0 as? TabBarItemContentView }.filter(\.isAccessibilityElement)
         #expect(accessibleItems.count == 3)
         let selected = accessibleItems.first { $0.accessibilityTraits.contains(.selected) }
@@ -49,7 +49,7 @@ private func descendants(of view: UIView) -> [UIView] {
         #expect(selected?.accessibilityActivate() == true)
         if vertical {
             #expect(Set(accessibleItems.map { $0.frame.minY }).count == 3)
-            #expect(accessibleItems.allSatisfy { $0.frame.width == 56 && $0.frame.height == 56 })
+            #expect(accessibleItems.allSatisfy { $0.frame.width == 40 && $0.frame.height == 48 })
             #expect(descendants(of: content).compactMap { $0 as? UILabel }.allSatisfy { $0.isHidden })
         }
     }
@@ -58,30 +58,11 @@ private func descendants(of view: UIView) -> [UIView] {
 
 @MainActor
 @Test func barLayoutAvoidsCameraAndFoldWithoutCoveringReservedRegions() {
-    let bounds = CGRect(x: 8, y: 8, width: 700, height: 500)
-    let regions = [CGRect(x: 620, y: 0, width: 100, height: 100),
-                   CGRect(x: 340, y: 0, width: 40, height: 520)]
-    for left in [true, false] {
-        let result = TabBarController.availableBarRegion(in: bounds, avoiding: regions, vertical: true, isLeft: left)
-        #expect(bounds.contains(result))
-        #expect(result.width >= 64 && result.height >= 176)
-        #expect(regions.allSatisfy { !result.intersects($0) })
-        #expect(left ? result.minX == bounds.minX : result.maxX == bounds.maxX)
-    }
+    let regions = [CGRect(x: 340, y: 0, width: 40, height: 520)]
     let bottom = CGRect(x: 8, y: 440, width: 700, height: 64)
-    let result = TabBarController.availableBarRegion(in: bottom, avoiding: regions, vertical: false, isLeft: false)
+    let result = TabBarController.availableBarRegion(in: bottom, avoiding: regions)
     #expect(result.height == 64)
     #expect(regions.allSatisfy { !result.intersects($0) })
-}
-
-@Test func verticalBarAlignsWithCameraOcclusionCenter() {
-    let bounds = CGRect(x: 0, y: 0, width: 760, height: 500)
-    let width: CGFloat = 56
-    let rightCamera = CGRect(x: 704, y: 430, width: 32, height: 32)
-    let leftCamera = CGRect(x: 24, y: 430, width: 32, height: 32)
-
-    #expect(TabBarController.verticalBarX(in: bounds, width: width, occlusionFrames: [rightCamera], isLeft: false) == 692)
-    #expect(TabBarController.verticalBarX(in: bounds, width: width, occlusionFrames: [leftCamera], isLeft: true) == 12)
 }
 
 @MainActor

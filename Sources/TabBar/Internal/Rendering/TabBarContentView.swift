@@ -157,7 +157,7 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         overrideUserInterfaceStyle = params.theme.isDark ? .dark : .light
 
         let innerInset: CGFloat = 4.0
-        let itemHeight: CGFloat = 56.0
+        let itemHeight = params.isVertical ? TabBarView.verticalItemHeight : TabBarView.itemHeight
 
         // 1. 计算每个 item 的宽度
         let (itemWidths, totalItemsWidth) = calculateItemWidths(

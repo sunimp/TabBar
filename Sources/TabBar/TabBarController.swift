@@ -113,6 +113,10 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         ])
         #if compiler(>=6.4)
         if #available(iOS 27.1, *) {
+            // 提前创建两侧 guide，保证姿态切换后的首次布局即可拿到已求解的系统轨道。
+            for edge in [NSDirectionalRectEdge.leading, .trailing] {
+                _ = verticalBarGuide(on: edge)
+            }
             registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (controller: TabBarController, _: UITraitCollection) in
                 controller.view.setNeedsLayout()
             }
@@ -339,10 +343,11 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
 
     // MARK: - 布局
 
-    /// 更新当前选中子控制器的 `additionalSafeAreaInsets.bottom`。
+    /// 更新当前选中子控制器的 `additionalSafeAreaInsets`，确保内容不被 TabBar 遮挡。
     ///
-    /// 确保子控制器的内容不会被 TabBar 遮挡。
-    /// 计算方式：TabBar 总高度 - 系统 safeAreaInsets.bottom（避免重复计算）。
+    /// - 横向：bottom = TabBar 顶部到屏幕底部的距离 - 系统 safeAreaInsets.bottom（避免重复计算）。
+    /// - 纵向：在 TabBar 所在侧补足超出系统 safe area 的部分；系统纵向栏 safe area 通常已覆盖轨道，此时为 0。
+    /// 只增减自身追加的部分，保留调用方设置的 insets。
     private func updateSelectedChildInsets() {
         if insetViewController !== selectedViewController {
             if let previous = insetViewController {
@@ -389,48 +394,42 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
 
     /// 计算并设置 TabBar 的 frame。
     ///
-    /// TabBar 以浮动胶囊形式居中显示在屏幕底部，左右留有 sideInset。
+    /// iPhone Duo 纵向栏姿态（闭合外屏、展开内屏横握）：贴系统纵向栏轨道底部，宽度与轨道一致；
+    /// 隐藏时沿所在侧水平滑出屏幕。
+    ///
+    /// 其余情况 TabBar 以浮动胶囊形式居中显示在屏幕底部，左右留有 sideInset，并避开保留区域。
     /// sideInset 根据底部间距动态调整：
     /// - `bottomInset <= 28`（SE / iOS 26 iPhone / iPad mini 等）→ sideInset = 20pt，胶囊适当收窄
     /// - `bottomInset > 28`（iOS 26 以下 Face ID iPhone，34pt）→ sideInset = 12pt，胶囊更宽
     /// 底部空间大时胶囊可以更宽，底部空间小时适当收窄以保持视觉平衡。
     private func updateTabBarFrame() {
         let bounds = view.bounds
+        if let rail = verticalBarRail {
+            // 系统纵向栏自上而下为灵动岛、状态栏、Toolbar、TabBar（HIG），TabBar 贴轨道底部；
+            // 轨道放不下全部 item 时由 TabBarView 内部纵向滚动。
+            tabBar.isVertical = true
+            let height = min(tabBar.verticalContentHeight, rail.height)
+            let isLeft = rail.midX < bounds.midX
+            tabBar.frame = CGRect(
+                x: isTabBarHidden ? (isLeft ? bounds.minX - rail.width : bounds.maxX) : rail.minX,
+                y: rail.maxY - height,
+                width: rail.width,
+                height: height
+            )
+            return
+        }
+        tabBar.isVertical = false
         let reservedFrames: [CGRect]
-        let occlusionFrames: [CGRect]
         #if compiler(>=6.4)
         if #available(iOS 27.1, *) {
-            occlusionFrames = view.reservedRegions(kind: .occlusion).filter(\.isActive).map(\.frame)
-            reservedFrames = (occlusionFrames + view.reservedRegions(kind: .division).filter(\.isActive).map(\.frame))
+            reservedFrames = (view.reservedRegions(kind: .occlusion).filter(\.isActive).map(\.frame)
+                + view.reservedRegions(kind: .division).filter(\.isActive).map(\.frame))
         } else {
-            occlusionFrames = []
             reservedFrames = []
         }
         #else
-        occlusionFrames = []
         reservedFrames = []
         #endif
-        if tabBar.isVertical {
-            var isLeft = false
-            #if compiler(>=6.4)
-            if #available(iOS 27.1, *) {
-                let leadingIsLeft = view.effectiveUserInterfaceLayoutDirection != .rightToLeft
-                isLeft = traitCollection.verticalBarEdge == .leading ? leadingIsLeft : !leadingIsLeft
-            }
-            #endif
-            let safeFrame = view.safeAreaLayoutGuide.layoutFrame.insetBy(dx: 8, dy: 8)
-            let available = Self.availableBarRegion(in: safeFrame, avoiding: reservedFrames, vertical: true, isLeft: isLeft)
-            let width = min(56, max(0, available.width))
-            let bottomInset = min(16, max(0, available.height - 44))
-            let height = min(CGFloat(tabBar.items.count) * 56 + 8, max(0, available.height - bottomInset))
-            let x = Self.verticalBarX(in: bounds, width: width, occlusionFrames: occlusionFrames, isLeft: isLeft)
-            // Duo places the tab bar below the toolbar in the vertical control rail.
-            let y = available.maxY - height - bottomInset
-            tabBar.frame = CGRect(x: isTabBarHidden ? (isLeft ? -width : bounds.maxX) : x,
-                                  y: isTabBarHidden ? available.maxY : y,
-                                  width: width, height: height)
-            return
-        }
         let bottomInset = tabBarBottomInset
         let sideInset: CGFloat = bottomInset <= 28.0 ? 20.0 : 12.0
         let tabBarHeight = tabBar.contentHeight
@@ -450,24 +449,36 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             width: tabBarWidth,
             height: tabBarHeight
         )
-        tabBar.frame = Self.availableBarRegion(in: proposed, avoiding: reservedFrames, vertical: false, isLeft: false)
+        tabBar.frame = Self.availableBarRegion(in: proposed, avoiding: reservedFrames)
     }
 
-    /// Align the vertical bar with the camera/occlusion center when Duo exposes it.
-    static func verticalBarX(in bounds: CGRect, width: CGFloat, occlusionFrames: [CGRect], isLeft: Bool) -> CGFloat {
-        let edge = isLeft ? bounds.minX : bounds.maxX
-        let candidates = occlusionFrames.filter { frame in
-            isLeft ? frame.midX < bounds.midX : frame.midX > bounds.midX
+    /// 系统为纵向栏提供的控制轨道（`view` 坐标系）；不处于纵向栏姿态（如展开内屏竖握）时返回 nil。
+    ///
+    /// `verticalBarEdge` 只表示系统偏好的边，需同时拿到非空 layout guide 才使用纵向布局。
+    /// 轨道已由系统避开摄像头、状态栏和折叠区域，并与状态栏处于同一列。
+    private var verticalBarRail: CGRect? {
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *), traitCollection.verticalBarEdge != .unspecified {
+            let edge: NSDirectionalRectEdge = traitCollection.verticalBarEdge == .leading ? .leading : .trailing
+            let rail = verticalBarGuide(on: edge).layoutFrame
+            return rail.isEmpty ? nil : rail
         }
-        if let occlusion = candidates.min(by: { abs($0.midX - edge) < abs($1.midX - edge) }) {
-            return occlusion.midX - width * 0.5
-        }
-        let edgeInset: CGFloat = 16
-        return isLeft ? bounds.minX + edgeInset : bounds.maxX - width - edgeInset
+        #endif
+        return nil
     }
 
-    /// 按系统保留区域切分候选矩形，选择能容纳控件且最接近系统栏位置的区域。
-    static func availableBarRegion(in frame: CGRect, avoiding regions: [CGRect], vertical: Bool, isLeft: Bool) -> CGRect {
+    #if compiler(>=6.4)
+    /// 指定边的纵向栏 layout guide，宽度与系统纵向栏一致。
+    ///
+    /// guide 在首次访问时创建，创建当次 `layoutFrame` 为空，需提前访问一次。
+    @available(iOS 27.1, *)
+    private func verticalBarGuide(on edge: NSDirectionalRectEdge) -> UILayoutGuide {
+        view.layoutGuide(for: .bar(onEdge: edge, extent: TabBarView.verticalBarExtent))
+    }
+    #endif
+
+    /// 按系统保留区域（摄像头遮挡、折叠分割）切分横向候选矩形，选择最靠下、最宽的区域。
+    static func availableBarRegion(in frame: CGRect, avoiding regions: [CGRect]) -> CGRect {
         var candidates = [frame]
         for region in regions {
             candidates = candidates.flatMap { candidate -> [CGRect] in
@@ -482,12 +493,6 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
             }
         }
         return candidates.max { lhs, rhs in
-            if vertical {
-                let leftDistance = isLeft ? lhs.minX - frame.minX : frame.maxX - lhs.maxX
-                let rightDistance = isLeft ? rhs.minX - frame.minX : frame.maxX - rhs.maxX
-                if leftDistance != rightDistance { return leftDistance > rightDistance }
-                return lhs.height < rhs.height
-            }
             if lhs.maxY != rhs.maxY { return lhs.maxY < rhs.maxY }
             return lhs.width < rhs.width
         } ?? CGRect(origin: frame.origin, size: .zero)
