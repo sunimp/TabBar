@@ -1,15 +1,6 @@
 {
-  "originHash" : "31fc1d612463988e08d03dec535ebddcc7e6dc5baade8681de0e10cec3425ee3",
+  "originHash" : "e7b220c6179fc4c82759a0bf195fe3f092c67b91f6431fb86bfd697d09fe2bcf",
   "pins" : [
-    {
-      "identity" : "gradientblur",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/sunimp/GradientBlur.git",
-      "state" : {
-        "revision" : "66c357d26bb03d0e4718afb2e797e293fb394cc4",
-        "version" : "0.1.1"
-      }
-    },
     {
       "identity" : "lookinside-release",
       "kind" : "remoteSourceControl",

@@ -7,9 +7,6 @@ settings:
 packages:
   TabBar:
     path: ..
-  GradientBlur:
-    url: https://github.com/sunimp/GradientBlur.git
-    version: 0.1.1
   LookInside-Release:
     url: https://github.com/LookInsideApp/LookInside-Release.git
     version: 0.2.4
@@ -27,8 +24,6 @@ targets:
     dependencies:
       - package: TabBar
         product: TabBar
-      - package: GradientBlur
-        product: GradientBlur
       - package: LookInside-Release
         product: LookInsideServer
 schemes:
