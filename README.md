@@ -25,7 +25,7 @@ https://github.com/sunimp/TabBar.git
 或在 `Package.swift` 中添加：
 
 ```swift
-.package(url: "https://github.com/sunimp/TabBar.git", from: "0.1.0")
+.package(url: "https://github.com/sunimp/TabBar.git", from: "0.2.0")
 ```
 
 ## 快速开始
