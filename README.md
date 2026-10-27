@@ -12,7 +12,7 @@ UIKit 自定义 TabBar，支持浮动胶囊、液态选中效果、角标和 Lot
 - `UIImage` 和 Lottie 图标。
 - 亮色、暗色和自定义样式。
 - 选中、重选、双击和长按回调。
-- iPhone Duo 纵向 TabBar、safe area 避让和双栏 Demo。
+- iPhone Duo 适配：跟随系统纵向栏轨道、避让摄像头与折叠区域、双栏 Demo。
 
 ## 安装
 
@@ -46,6 +46,21 @@ controller.setViewControllers(
 
 主要类型：`TabBarController`、`TabBarView`、`TabBarItem`、`TabBarItemAnimation`、`TabBarStyle`。
 
+## iPhone Duo
+
+使用 iOS 27.1 SDK（Xcode 27.1+）构建时，`TabBarController` 按 [Designing for iPhone Duo](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo) 自动适配，无需额外配置：
+
+| 姿态 | TabBar 布局 |
+| --- | --- |
+| 闭合外屏（任意方向） | 纵向，位于系统纵向栏轨道底部，与摄像头、状态栏同列 |
+| 展开内屏横握 | 纵向，位于屏幕侧边，与状态栏同列 |
+| 展开内屏竖握 | 横向，位于底部 |
+
+- 纵向与否、所在侧和轨道 frame 均来自系统：`UITraitCollection.verticalBarEdge` 与 `UIView.layoutGuide(for: .bar(onEdge:extent:))`。轨道宽 48pt，与系统纵向栏按钮一致；纵向时只显示图标。
+- 横向布局按 `reservedRegions(kind:)` 避开摄像头遮挡和折叠区域。
+- TabBar 通过子控制器的 `additionalSafeAreaInsets` 避让；内容请约束到 `safeAreaLayoutGuide`，不要贴 `view` 边缘。
+- 双栏布局推荐 `UISplitViewController`。Demo 的聊天、设置仅在 Duo 展开内屏（横纵 size class 均为 regular）显示列表 + 详情双栏；其它 iPhone 与 Duo 外屏为单栏，详情使用系统 push/pop，TabBar 随前一页一起移出。
+
 ## Demo
 
 打开 `Demo/TabBarDemo.xcodeproj`，运行 `TabBarDemo` scheme。
@@ -58,13 +73,25 @@ controller.setViewControllers(
 | --- | --- |
 | <img src="Screenshots/ios26+_light.png" alt="iOS 26+ 亮色" width="280"> | <img src="Screenshots/ios26+_dark.png" alt="iOS 26+ 暗色" width="280"> |
 
-| iPhone Duo 闭合外屏 | iPhone Duo 展开内屏 |
-| --- | --- |
-| <img src="Screenshots/iphone-duo-closed.png" alt="iPhone Duo 闭合外屏" width="280"> | <img src="Screenshots/iphone-duo-open.png" alt="iPhone Duo 展开内屏" width="280"> |
+iPhone Duo（Xcode Device Hub）：
 
-Duo 姿态使用 Xcode Device Hub 验证。闭合外屏使用侧边纵向 TabBar；展开内屏使用会话列表与详情双栏布局。
+| 闭合外屏 · 竖握 | 闭合外屏 · 横握 |
+| --- | --- |
+| <img src="Screenshots/iphone-duo-closed-1.png" alt="iPhone Duo 闭合外屏竖握" width="280"> | <img src="Screenshots/iphone-duo-closed-2.png" alt="iPhone Duo 闭合外屏横握" width="390"> |
+
+| 展开内屏 · 横握 | 展开内屏 · 竖握 |
+| --- | --- |
+| <img src="Screenshots/iphone-duo-open-1.png" alt="iPhone Duo 展开内屏横握" width="390"> | <img src="Screenshots/iphone-duo-open-2.png" alt="iPhone Duo 展开内屏竖握" width="280"> |
+
+| 半折叠 |
+| --- |
+| <img src="Screenshots/iphone-duo-open-3.png" alt="iPhone Duo 半折叠" width="390"> |
+
+闭合外屏：TabBar 纵向位于摄像头所在列，摄像头在上时贴轨道底部、在下时位于摄像头上方。展开内屏横握及半折叠：会话列表与详情双栏，TabBar 位于状态栏所在列。展开内屏竖握：TabBar 回到底部横向。
 
 ## 验证
+
+CI 在 GitHub Actions 上使用 Xcode 26.3（macos-15）与 Xcode 26.6（macos-26）运行测试并构建 Demo。iPhone Duo 相关代码以 `#if compiler(>=6.4)` 隔离，旧工具链编译时不包含这部分。iPhone Duo 姿态需本地使用 Xcode 27.1+ 的 Device Hub 验证。
 
 运行测试：
 
