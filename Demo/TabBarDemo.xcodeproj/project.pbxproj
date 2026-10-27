@@ -14,14 +14,12 @@
 		5B86AC870C61C4B7BEE46DC7 /* TabBar in Frameworks */ = {isa = PBXBuildFile; productRef = E05CBF9B87EA2F20B2C67BC8 /* TabBar */; };
 		64FAE58562CCCB80C5157B72 /* TabContacts.json in Resources */ = {isa = PBXBuildFile; fileRef = 0626AA6B676CDD5C5EE4A978 /* TabContacts.json */; };
 		723F2EA0972C22319F447A26 /* ChatDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5BFAD93F25CEDF5BED4232 /* ChatDetailViewController.swift */; };
-		8B05E55C699F3ADF705B07CF /* LookInsideServer in Frameworks */ = {isa = PBXBuildFile; productRef = 70CE78543121DD080A998198 /* LookInsideServer */; };
 		B3C1D7BD69C5F776AC0E8463 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ADCF86611CAAD61D8F92A52 /* SettingsViewController.swift */; };
 		B6030B739485132FD29F15BB /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CEA9FC3B75B2AA556D5A8279 /* LaunchScreen.storyboard */; };
 		B6F038034B87A830E0FEAFF4 /* TabChats.json in Resources */ = {isa = PBXBuildFile; fileRef = 43371C8B0533F04FC322085E /* TabChats.json */; };
 		C7C2DA1AB4E62E9CCC1502A7 /* ChatListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0EC327C27E5D848E43A98FE /* ChatListViewController.swift */; };
 		EC4C8D19131F63494C48D00E /* TabSettings.json in Resources */ = {isa = PBXBuildFile; fileRef = 9FC85C0DBCEE75B7A13C6E84 /* TabSettings.json */; };
-		F0BDCEED62113D188B2D3F2C /* NavigationBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12557CAFB5EB3B31C9EA2C8 /* NavigationBarView.swift */; };
-		F37DB548BC2DB7DD75335C4D /* GradientBlur in Frameworks */ = {isa = PBXBuildFile; productRef = 4871189FA02A6BE0132F8430 /* GradientBlur */; };
+		F37DB548BC2DB7DD75335C4D /* LookInsideServer in Frameworks */ = {isa = PBXBuildFile; productRef = 70CE78543121DD080A998198 /* LookInsideServer */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,7 +37,6 @@
 		B0EC327C27E5D848E43A98FE /* ChatListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListViewController.swift; sourceTree = "<group>"; };
 		CBC496C8F0ACBBDF4F6B7623 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		CEA9FC3B75B2AA556D5A8279 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		F12557CAFB5EB3B31C9EA2C8 /* NavigationBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,8 +45,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5B86AC870C61C4B7BEE46DC7 /* TabBar in Frameworks */,
-				F37DB548BC2DB7DD75335C4D /* GradientBlur in Frameworks */,
-				8B05E55C699F3ADF705B07CF /* LookInsideServer in Frameworks */,
+				F37DB548BC2DB7DD75335C4D /* LookInsideServer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,7 +62,6 @@
 				02CB69FAF8D4AB2BCE552A6A /* DemoTabBarController.swift */,
 				62358FD07BAF471B02E3D3F5 /* Info.plist */,
 				CEA9FC3B75B2AA556D5A8279 /* LaunchScreen.storyboard */,
-				F12557CAFB5EB3B31C9EA2C8 /* NavigationBarView.swift */,
 				CBC496C8F0ACBBDF4F6B7623 /* SceneDelegate.swift */,
 				0ADCF86611CAAD61D8F92A52 /* SettingsViewController.swift */,
 				B9DB2C061B3EEDD4B8F5763B /* Animations */,
@@ -127,7 +122,6 @@
 			name = TabBarDemo;
 			packageProductDependencies = (
 				E05CBF9B87EA2F20B2C67BC8 /* TabBar */,
-				4871189FA02A6BE0132F8430 /* GradientBlur */,
 				70CE78543121DD080A998198 /* LookInsideServer */,
 			);
 			productName = TabBarDemo;
@@ -155,7 +149,6 @@
 			mainGroup = 5730DE50F18B569AAADA5C50;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				7171EA881493CE54D8F6D9FF /* XCRemoteSwiftPackageReference "GradientBlur" */,
 				CA597BCE378A4D796DA8CE1B /* XCRemoteSwiftPackageReference "LookInside-Release" */,
 				C5B862692A6278548BAD8D78 /* XCLocalSwiftPackageReference ".." */,
 			);
@@ -193,7 +186,6 @@
 				C7C2DA1AB4E62E9CCC1502A7 /* ChatListViewController.swift in Sources */,
 				4ED546FADDCC062EC85B27E7 /* ContactsViewController.swift in Sources */,
 				31636D3789B132677967DBA6 /* DemoTabBarController.swift in Sources */,
-				F0BDCEED62113D188B2D3F2C /* NavigationBarView.swift in Sources */,
 				2766AA2EB3339795FFFE81EF /* SceneDelegate.swift in Sources */,
 				B3C1D7BD69C5F776AC0E8463 /* SettingsViewController.swift in Sources */,
 			);
@@ -384,30 +376,17 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		7171EA881493CE54D8F6D9FF /* XCRemoteSwiftPackageReference "GradientBlur" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sunimp/GradientBlur.git";
-			requirement = {
-				kind = exactVersion;
-				version = 0.1.1;
-			};
-		};
 		CA597BCE378A4D796DA8CE1B /* XCRemoteSwiftPackageReference "LookInside-Release" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/LookInsideApp/LookInside-Release.git";
 			requirement = {
 				kind = exactVersion;
-				version = 0.2.0;
+				version = 0.2.4;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4871189FA02A6BE0132F8430 /* GradientBlur */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7171EA881493CE54D8F6D9FF /* XCRemoteSwiftPackageReference "GradientBlur" */;
-			productName = GradientBlur;
-		};
 		70CE78543121DD080A998198 /* LookInsideServer */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = CA597BCE378A4D796DA8CE1B /* XCRemoteSwiftPackageReference "LookInside-Release" */;

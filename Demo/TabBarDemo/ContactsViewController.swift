@@ -74,16 +74,13 @@ private let demoSections: [ContactSection] = [
 ]
 
 final class ContactsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, TabBarReselectHandling {
-    private let navBar = NavigationBarView()
     private let tableView = UITableView(frame: .zero, style: .plain)
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        navBar.title = "联系人"
-        navBar.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(navBar)
+        title = "联系人"
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -92,15 +89,14 @@ final class ContactsViewController: UIViewController, UITableViewDataSource, UIT
         tableView.sectionIndexColor = UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
+        // 表格嵌套在 TabBarController 内容容器中，系统无法自动识别，需显式声明供导航栏大标题跟随滚动。
+        setContentScrollView(tableView)
 
         NSLayoutConstraint.activate([
-            navBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
-            tableView.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            // plain 列表的分割线贴 cell 边缘，需止于 safe area，避免延伸进右侧纵向栏区域。
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }

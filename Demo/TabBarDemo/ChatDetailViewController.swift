@@ -20,6 +20,7 @@ final class ChatDetailViewController: UIViewController {
         self.color = color
         super.init(nibName: nil, bundle: nil)
         title = chatName
+        navigationItem.largeTitleDisplayMode = .never
     }
 
     @available(*, unavailable)
@@ -64,8 +65,8 @@ final class ChatDetailViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: inputBar.topAnchor),
 
             contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 16.0),
@@ -74,12 +75,12 @@ final class ChatDetailViewController: UIViewController {
             contentStack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -16.0),
             contentStack.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -24.0),
 
-            inputBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            inputBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            inputBar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            inputBar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             inputBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             inputBar.heightAnchor.constraint(equalToConstant: 52.0),
 
-            textFieldBackground.leadingAnchor.constraint(equalTo: inputBar.leadingAnchor, constant: 12.0),
+            textFieldBackground.leadingAnchor.constraint(equalTo: inputBar.leadingAnchor, constant: 16.0),
             textFieldBackground.centerYAnchor.constraint(equalTo: inputBar.centerYAnchor),
             textFieldBackground.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor, constant: -12.0),
             textFieldBackground.heightAnchor.constraint(equalToConstant: 36.0),
@@ -87,7 +88,7 @@ final class ChatDetailViewController: UIViewController {
             placeholderLabel.leadingAnchor.constraint(equalTo: textFieldBackground.leadingAnchor, constant: 14.0),
             placeholderLabel.centerYAnchor.constraint(equalTo: textFieldBackground.centerYAnchor),
 
-            sendButton.trailingAnchor.constraint(equalTo: inputBar.trailingAnchor, constant: -12.0),
+            sendButton.trailingAnchor.constraint(equalTo: inputBar.trailingAnchor, constant: -16.0),
             sendButton.centerYAnchor.constraint(equalTo: inputBar.centerYAnchor),
             sendButton.widthAnchor.constraint(equalToConstant: 32.0),
             sendButton.heightAnchor.constraint(equalToConstant: 32.0),

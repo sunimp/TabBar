@@ -1,64 +1,32 @@
 # TabBar
 
 [![CI](https://github.com/sunimp/TabBar/actions/workflows/ci.yml/badge.svg)](https://github.com/sunimp/TabBar/actions/workflows/ci.yml)
-[![Swift Package Manager](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
+[![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-TabBar 是一个 UIKit 自定义底部导航组件，提供浮动胶囊布局、液态选中指示器、角标和 Lottie 图标动画。
-
-## 效果预览
-
-| iOS 15+ 亮色 | iOS 15+ 暗色 |
-| --- | --- |
-| <img src="Screenshots/ios15+_light.png" alt="iOS 15+ 亮色效果" width="300"> | <img src="Screenshots/ios15+_dark.png" alt="iOS 15+ 暗色效果" width="300"> |
-
-| iOS 26+ 亮色 | iOS 26+ 暗色 |
-| --- | --- |
-| <img src="Screenshots/ios26+_light.png" alt="iOS 26+ 亮色效果" width="300"> | <img src="Screenshots/ios26+_dark.png" alt="iOS 26+ 暗色效果" width="300"> |
+UIKit 自定义 TabBar，支持浮动胶囊、液态选中效果、角标和 Lottie 图标动画，并适配 iPhone Duo 的侧边纵向布局。
 
 ## 特性
 
-- 适用于 UIKit App 的浮动胶囊式 TabBar。
-- 液态选中指示器和玻璃背景渲染。
-- 支持未读数和短文本角标。
-- 支持静态 `UIImage` 图标和 Lottie 动画图标。
-- 提供选中、重选、双击、长按等代理回调。
-- 内置亮色和暗色样式，并支持自定义颜色。
-
-## 环境要求
-
-- iOS 15.0+
-- Swift 6.0+
-- Xcode 16.0+
-- Swift Package Manager
+- iOS 15+、Swift Package Manager。
+- `UIImage` 和 Lottie 图标。
+- 亮色、暗色和自定义样式。
+- 选中、重选、双击和长按回调。
+- iPhone Duo 适配：跟随系统纵向栏轨道、避让摄像头与折叠区域、双栏 Demo。
 
 ## 安装
 
-在 Xcode 中添加 Swift Package：
+在 Xcode 中添加：
 
 ```text
 https://github.com/sunimp/TabBar.git
 ```
 
-或在 `Package.swift` 中添加依赖：
+或在 `Package.swift` 中添加：
 
 ```swift
-.package(url: "https://github.com/sunimp/TabBar.git", from: "0.1.0")
+.package(url: "https://github.com/sunimp/TabBar.git", from: "0.2.0")
 ```
-
-然后把 `TabBar` 加到目标依赖中：
-
-```swift
-.product(name: "TabBar", package: "TabBar")
-```
-
-## 公开 API
-
-- `TabBarController`
-- `TabBarView`
-- `TabBarItem`
-- `TabBarItemAnimation`
-- `TabBarStyle`
 
 ## 快速开始
 
@@ -66,89 +34,89 @@ https://github.com/sunimp/TabBar.git
 import TabBar
 import UIKit
 
-let chats = UIViewController()
-let chatsItem = TabBarItem(
-    id: "chats",
-    title: "聊天",
-    image: UIImage(systemName: "bubble.left.and.bubble.right"),
-    selectedImage: UIImage(systemName: "bubble.left.and.bubble.right.fill"),
-    badgeValue: "3",
-    animation: TabBarItemAnimation(name: "TabChats")
-)
-
-let contacts = UIViewController()
-let contactsItem = TabBarItem(
-    id: "contacts",
-    title: "联系人",
-    image: UIImage(systemName: "person.2"),
-    selectedImage: UIImage(systemName: "person.2.fill")
-)
-
-let controller = TabBarController(style: .default)
+let controller = TabBarController()
 controller.setViewControllers(
-    [chats, contacts],
-    items: [chatsItem, contactsItem],
-    selectedIndex: 0
+    [UIViewController(), UIViewController()],
+    items: [
+        TabBarItem(title: "首页", image: UIImage(systemName: "house")),
+        TabBarItem(title: "设置", image: UIImage(systemName: "gear")),
+    ]
 )
 ```
 
-## 样式定制
+主要类型：`TabBarController`、`TabBarView`、`TabBarItem`、`TabBarItemAnimation`、`TabBarStyle`。
 
-通过 `TabBarStyle` 定制颜色：
+## iPhone Duo
 
-```swift
-var style = TabBarStyle.default
-style.backgroundColor = .systemBackground
-style.selectedIconColor = .systemBlue
-style.selectedTextColor = .systemBlue
+使用 iOS 27.1 SDK（Xcode 27.1+）构建时，`TabBarController` 按 [Designing for iPhone Duo](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo) 自动适配，无需额外配置：
 
-controller.style = style
-```
+| 姿态 | TabBar 布局 |
+| --- | --- |
+| 闭合外屏（任意方向） | 纵向，位于系统纵向栏轨道底部，与摄像头、状态栏同列 |
+| 展开内屏横握 | 纵向，位于屏幕侧边，与状态栏同列 |
+| 展开内屏竖握 | 横向，位于底部 |
 
-通过代理处理交互事件：
-
-```swift
-final class HomeController: TabBarControllerDelegate {
-    func tabBarController(_ controller: TabBarController, didReselect viewController: UIViewController, at index: Int) {
-        // 可在这里执行滚动到顶部、刷新等业务动作。
-    }
-}
-```
+- 纵向与否、所在侧和轨道 frame 均来自系统：`UITraitCollection.verticalBarEdge` 与 `UIView.layoutGuide(for: .bar(onEdge:extent:))`。轨道宽 48pt，与系统纵向栏按钮一致；纵向时只显示图标。
+- 横向布局按 `reservedRegions(kind:)` 避开摄像头遮挡和折叠区域。
+- TabBar 通过子控制器的 `additionalSafeAreaInsets` 避让；内容请约束到 `safeAreaLayoutGuide`，不要贴 `view` 边缘。
+- 双栏布局推荐 `UISplitViewController`。Demo 的聊天、设置仅在 Duo 展开内屏（横纵 size class 均为 regular）显示列表 + 详情双栏；其它 iPhone 与 Duo 外屏为单栏，详情使用系统 push/pop，TabBar 随前一页一起移出。
 
 ## Demo
 
 打开 `Demo/TabBarDemo.xcodeproj`，运行 `TabBarDemo` scheme。
 
-如果需要重新生成 demo 工程文件，使用 XcodeGen：
+| iOS 15+ 亮色 | iOS 15+ 暗色 |
+| --- | --- |
+| <img src="Screenshots/ios15+_light.png" alt="iOS 15+ 亮色" width="280"> | <img src="Screenshots/ios15+_dark.png" alt="iOS 15+ 暗色" width="280"> |
+
+| iOS 26+ 亮色 | iOS 26+ 暗色 |
+| --- | --- |
+| <img src="Screenshots/ios26+_light.png" alt="iOS 26+ 亮色" width="280"> | <img src="Screenshots/ios26+_dark.png" alt="iOS 26+ 暗色" width="280"> |
+
+iPhone Duo（Xcode Device Hub）：
+
+| 闭合外屏 · 竖握 | 闭合外屏 · 横握 |
+| --- | --- |
+| <img src="Screenshots/iphone-duo-closed-1.png" alt="iPhone Duo 闭合外屏竖握" width="280"> | <img src="Screenshots/iphone-duo-closed-2.png" alt="iPhone Duo 闭合外屏横握" width="390"> |
+
+| 展开内屏 · 横握 | 展开内屏 · 竖握 |
+| --- | --- |
+| <img src="Screenshots/iphone-duo-open-1.png" alt="iPhone Duo 展开内屏横握" width="390"> | <img src="Screenshots/iphone-duo-open-2.png" alt="iPhone Duo 展开内屏竖握" width="280"> |
+
+| 半折叠 |
+| --- |
+| <img src="Screenshots/iphone-duo-open-3.png" alt="iPhone Duo 半折叠" width="390"> |
+
+闭合外屏：TabBar 纵向位于摄像头所在列，摄像头在上时贴轨道底部、在下时位于摄像头上方。展开内屏横握及半折叠：会话列表与详情双栏，TabBar 位于状态栏所在列。展开内屏竖握：TabBar 回到底部横向。
+
+## 验证
+
+CI 在 GitHub Actions 上使用 Xcode 26.6（macos-26）与 Xcode 27.1（xcode-27，preview 镜像）运行测试并构建 Demo。iPhone Duo 相关代码以 `#if compiler(>=6.4)` 隔离，只有 Xcode 27.1 会编译这部分，26.6 用于确认旧工具链仍可编译。iPhone Duo 姿态需本地使用 Xcode 27.1+ 的 Device Hub 验证。
+
+运行测试：
 
 ```bash
-cd Demo
-xcodegen generate
-```
-
-## 开发
-
-运行 iOS Simulator 测试：
-
-```bash
-DESTINATION_ID="$(xcrun simctl list devices available --json | python3 -c 'import json, sys; devices = [device for runtime in json.load(sys.stdin)["devices"].values() for device in runtime]; phones = [device for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")]; print(phones[0]["udid"])')"
 xcodebuild test \
   -scheme TabBar \
   -destination "platform=iOS Simulator,id=${DESTINATION_ID}"
 ```
 
-命令行构建 Swift Package 时，需要显式指定 iOS SDK：
+构建 Demo：
 
 ```bash
-swift build --build-tests \
-  --triple arm64-apple-ios18.6-simulator \
-  --sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+xcodebuild build \
+  -project Demo/TabBarDemo.xcodeproj \
+  -scheme TabBarDemo \
+  -destination "generic/platform=iOS Simulator" \
+  CODE_SIGNING_ALLOWED=NO
 ```
 
-## 说明
+如需重新生成 Demo 工程：
 
-`TabBar` 是 UIKit 组件。部分视觉效果会在运行时检查平台能力；能力不可用时，会自动回退到受支持的渲染路径。
+```bash
+cd Demo && xcodegen generate
+```
 
 ## License
 
-TabBar 使用 MIT License 开源，详见 [LICENSE](LICENSE)。
+MIT，详见 [LICENSE](LICENSE)。

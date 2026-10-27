@@ -43,17 +43,14 @@ private let demoChats: [ChatItem] = {
 }()
 
 final class ChatListViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, TabBarReselectHandling, TabBarDoubleTapHandling {
-    private let navBar = NavigationBarView()
+    var onSelectChat: ((String, UIColor) -> Void)?
     private let tableView = UITableView(frame: .zero, style: .plain)
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        navBar.title = "聊天"
-        navBar.subtitle = "\(demoChats.count)"
-        navBar.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(navBar)
+        title = "聊天 \(demoChats.count)"
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -62,15 +59,14 @@ final class ChatListViewController: UIViewController, UITableViewDataSource, UIT
         tableView.separatorInset = UIEdgeInsets(top: 0.0, left: 76.0, bottom: 0.0, right: 0.0)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
+        // 表格嵌套在 TabBarController 内容容器中，系统无法自动识别，需显式声明供导航栏大标题跟随滚动。
+        setContentScrollView(tableView)
 
         NSLayoutConstraint.activate([
-            navBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
-            tableView.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            // plain 列表的分割线贴 cell 边缘，需止于 safe area，避免延伸进右侧纵向栏区域。
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
@@ -98,8 +94,34 @@ final class ChatListViewController: UIViewController, UITableViewDataSource, UIT
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let chat = demoChats[indexPath.row]
+        if let onSelectChat {
+            onSelectChat(chat.name, chat.color)
+            return
+        }
         let detail = ChatDetailViewController(chatName: chat.name, color: chat.color)
         navigationController?.pushViewController(detail, animated: true)
+    }
+}
+
+/// 会话列表 + 详情，布局规则见 `ListDetailSplitViewController`。
+final class ChatSplitViewController: ListDetailSplitViewController, TabBarReselectHandling, TabBarDoubleTapHandling {
+    private let chatList: ChatListViewController
+
+    init() {
+        let list = ChatListViewController()
+        chatList = list
+        super.init(list: list, initialDetail: ChatDetailViewController(chatName: "通知", color: .systemBlue))
+        list.onSelectChat = { [weak self] name, color in
+            self?.showDetail(ChatDetailViewController(chatName: name, color: color))
+        }
+    }
+
+    func handleTabBarReselect() {
+        chatList.handleTabBarReselect()
+    }
+
+    func handleTabBarDoubleTap() {
+        chatList.handleTabBarDoubleTap()
     }
 }
 

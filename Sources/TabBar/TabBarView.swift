@@ -44,10 +44,30 @@ public extension TabBarViewDelegate {
 /// 负责 TabBar 的渲染和交互，内部通过 `TabBarContentView` 管理具体的布局和动画。
 /// 通常由 `TabBarController` 持有和管理，也可以独立使用。
 public final class TabBarView: UIView {
-    /// 最小底部间距。
-    private static let minimumBottomInset: CGFloat = 8.0
     /// 单个 tab 项的高度。
-    private static let itemHeight: CGFloat = 56.0
+    static let itemHeight: CGFloat = 56.0
+    /// 胶囊内边距。
+    static let innerInset: CGFloat = 4.0
+    /// iPhone Duo 纵向控制轨道宽度，与系统纵向栏按钮（48pt，Device Hub 实测）一致。
+    static let verticalBarExtent: CGFloat = 48.0
+    /// 纵向布局单个 tab 项的高度，与轨道宽度一致，使选中指示接近正方形。
+    static let verticalItemHeight: CGFloat = verticalBarExtent
+
+    /// 是否按 iPhone Duo 纵向控制轨道布局。
+    ///
+    /// 由 `TabBarController` 根据系统纵向栏 layout guide 统一设置，避免 trait 与实际 frame 不一致。
+    var isVertical = false {
+        didSet {
+            guard oldValue != isVertical else { return }
+            invalidateIntrinsicContentSize()
+            setNeedsLayout()
+        }
+    }
+
+    /// 纵向布局时完整展示所有 item 所需的高度。
+    var verticalContentHeight: CGFloat {
+        CGFloat(items.count) * Self.verticalItemHeight + Self.innerInset * 2.0
+    }
 
     /// 代理，接收交互事件。
     public weak var delegate: TabBarViewDelegate?
@@ -105,11 +125,14 @@ public final class TabBarView: UIView {
     }
 
     override public var intrinsicContentSize: CGSize {
-        CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
+        isVertical
+            ? CGSize(width: Self.verticalBarExtent, height: verticalContentHeight)
+            : CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
     }
 
     /// 核心内容视图，负责所有 tab 项的布局、渲染和手势处理。
     private let tabBarContentView = TabBarContentView()
+    private let scrollView = UIScrollView()
     /// 上一次 `TabBarContentView.update()` 返回的实际尺寸。
     private var tabBarContentSize: CGSize = .zero
     /// 是否需要在下次 layout 时使用动画更新选中状态。
@@ -120,7 +143,12 @@ public final class TabBarView: UIView {
         super.init(frame: .zero)
         backgroundColor = .clear
 
-        addSubview(tabBarContentView)
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.clipsToBounds = false
+        addSubview(scrollView)
+        scrollView.addSubview(tabBarContentView)
+        tabBarContentView.deferSelection(to: scrollView.panGestureRecognizer)
         // TabBarContentView 在手势交互时会主动请求更新（如拖拽切换 tab）
         tabBarContentView.onNeedsUpdate = { [weak self] transition in
             self?.performUpdate(transition: transition)
@@ -194,7 +222,10 @@ public final class TabBarView: UIView {
         let params = TabBarContentView.Params(
             theme: style,
             selectedIndex: items.indices.contains(selectedIndex) ? selectedIndex : nil,
-            outerInsets: UIEdgeInsets(top: 0.0, left: frame.origin.x, bottom: 0.0, right: frame.origin.x)
+            outerInsets: isVertical
+                ? UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+                : UIEdgeInsets(top: 0.0, left: frame.origin.x, bottom: 0.0, right: frame.origin.x),
+            isVertical: isVertical
         )
 
         tabBarContentSize = tabBarContentView.update(
@@ -208,9 +239,16 @@ public final class TabBarView: UIView {
             invalidateIntrinsicContentSize()
         }
 
+        scrollView.frame = bounds
+        scrollView.isScrollEnabled = isVertical && tabBarContentSize.height > bounds.height
+        scrollView.clipsToBounds = scrollView.isScrollEnabled
+        scrollView.contentSize = tabBarContentSize
+        if !scrollView.isScrollEnabled {
+            scrollView.contentOffset = .zero
+        }
         tabBarContentView.frame = CGRect(
             x: floor((bounds.width - tabBarContentSize.width) * 0.5),
-            y: max(0.0, bounds.height - tabBarContentSize.height),
+            y: isVertical ? 0 : max(0.0, bounds.height - tabBarContentSize.height),
             width: tabBarContentSize.width,
             height: tabBarContentSize.height
         )
@@ -237,6 +275,6 @@ public final class TabBarView: UIView {
 
     /// 估算内容高度，在首次 update 之前使用。
     private var estimatedContentHeight: CGFloat {
-        Self.itemHeight + 8.0 // itemHeight(56) + innerInset(4) * 2
+        Self.itemHeight + Self.innerInset * 2.0
     }
 }

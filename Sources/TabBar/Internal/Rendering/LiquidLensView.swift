@@ -408,10 +408,11 @@ final class LiquidLensView: UIView {
             let lensFrame = baseLensFrame.insetBy(dx: params.inset, dy: params.inset)
             let effectiveLensFrame = lensFrame.insetBy(dx: params.isLifted ? -2.0 : 0.0, dy: params.isLifted ? -2.0 : 0.0)
 
-            if legacyContentMaskBlobView.image?.size.height != lensFrame.height {
-                legacyContentMaskBlobView.image = generateStretchableFilledCircleImage(diameter: lensFrame.height, color: .black)
+            let diameter = min(lensFrame.width, lensFrame.height)
+            if legacyContentMaskBlobView.image?.size.height != diameter {
+                legacyContentMaskBlobView.image = generateStretchableFilledCircleImage(diameter: diameter, color: .black)
                 legacyLiftedContentBlobMaskView.image = legacyContentMaskBlobView.image
-                legacySelectionView.image = generateStretchableFilledCircleImage(diameter: lensFrame.height, color: .white)?.withRenderingMode(.alwaysTemplate)
+                legacySelectionView.image = generateStretchableFilledCircleImage(diameter: diameter, color: .white)?.withRenderingMode(.alwaysTemplate)
             }
             transition.setFrame(view: legacyContentMaskBlobView, frame: effectiveLensFrame)
             transition.setFrame(view: legacyLiftedContentBlobMaskView, frame: effectiveLensFrame)
@@ -423,9 +424,10 @@ final class LiquidLensView: UIView {
         // restingBackgroundView 需要比 liftedContainerView 更宽，防止 _UILiquidLensView
         // 内部 spring 回弹时 DestOutView 挖掉的区域超出 restingBackgroundView 的边界，
         // 导致露出下层 GlassBackgroundView 的白色背景。
-        let restingOverflow = lensView != nil ? max(params.outerInsets.left, params.outerInsets.right) : 0.0
-        let restingSize = CGSize(width: params.size.width + restingOverflow * 2.0, height: params.size.height)
-        transition.setFrame(view: restingBackgroundView, frame: CGRect(origin: CGPoint(x: -restingOverflow, y: 0.0), size: restingSize))
+        let overflowX = lensView != nil ? max(params.outerInsets.left, params.outerInsets.right) : 0
+        let overflowY = lensView != nil ? max(params.outerInsets.top, params.outerInsets.bottom) : 0
+        let restingFrame = CGRect(origin: .zero, size: params.size).insetBy(dx: -overflowX, dy: -overflowY)
+        transition.setFrame(view: restingBackgroundView, frame: restingFrame)
         restingBackgroundView.update(isDark: params.isDark)
         transition.setAlpha(view: restingBackgroundView, alpha: (params.isLifted || params.isCollapsed) ? 0.0 : 1.0)
 
