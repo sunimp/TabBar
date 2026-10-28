@@ -12,12 +12,13 @@
 
 参考 HIG [Designing for iPhone Duo](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo)。
 
-- 纵向判定唯一来源：`verticalBarEdge != .unspecified` 且 `layoutGuide(for: .bar(onEdge:extent:))` 非空；只有 `TabBarController` 设置 `TabBarView.isVertical`，不要在其他地方读 trait 判断。
+- 纵向判定唯一来源：`verticalBarEdge != .unspecified` 且 window 上的 `layoutGuide(for: .bar(onEdge:extent:))` 非空；只有 `TabBarController` 设置 `TabBarView.isVertical`，不要在其他地方读 trait 判断。
+- bar guide 必须取自 window 再转换到 `view`：外层 `UINavigationController` 会在纵向栏一侧给子控制器追加 safe area（分屏左侧 leading 84pt），`view` 上的 guide 会叠在其后偏离系统纵向栏列。
 - 轨道 frame、所在侧完全取自系统 guide；禁止自行按摄像头 occlusion、`midY` 或屏幕边缘计算位置。轨道已与状态栏、摄像头同列，并避开保留区域。
 - 轨道宽度 `TabBarView.verticalBarExtent = 48`，与系统纵向栏按钮实测一致；改动需重新实测。
-- bar guide 首次访问时 `layoutFrame` 为空，`viewDidLoad` 中需提前创建两侧 guide，否则姿态切换后首帧会错位。
-- 纵向 TabBar 贴轨道底部（系统顺序：灵动岛、状态栏、Toolbar、TabBar），只显示图标。
-- 预期布局：闭合外屏任意方向为纵向、与摄像头同列；展开内屏横握为纵向、与状态栏同列；展开内屏竖握为底部横向。
+- bar guide 首次访问时 `layoutFrame` 为空，`viewIsAppearing` 中需提前在 window 上创建两侧 guide，否则姿态切换后首帧会错位。
+- 纵向 TabBar 贴轨道底部（系统顺序：灵动岛、状态栏、Toolbar、TabBar），只显示图标；长按向内侧展开显示标题，展开只改 TabBar frame，不改子控制器 insets。
+- 预期布局：闭合外屏任意方向为纵向、与摄像头同列；展开内屏横握为纵向、与状态栏同列（分屏时在本 App 一侧的系统纵向栏列）；展开内屏竖握为底部横向。
 - Demo 自绘内容（消息区、输入栏等）约束到 `safeAreaLayoutGuide`，以避让左右两侧的纵向 TabBar 和摄像头列。plain `UITableView` 右侧约束到 safe area（否则分割线延伸进纵向栏区域）；`insetGrouped` 表格与容器控制器贴 view 边缘，由系统处理 safe area（否则靠纵向栏一侧丢失圆角）。
 - Demo 只用系统导航：外层 `UINavigationController` 包 `DemoTabBarController`，不自绘导航栏。
 - 聊天、设置继承 `ListDetailSplitViewController`（内含 `UISplitViewController`）：仅横纵 size class 均为 regular（Duo 展开内屏）时双栏，不用设备型号判断；其它情况（含 Pro Max 横屏、Duo 外屏）折叠为单栏。

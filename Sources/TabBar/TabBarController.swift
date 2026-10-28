@@ -89,6 +89,9 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         tabBar = TabBarView(style: style)
         super.init(nibName: nil, bundle: nil)
         tabBar.delegate = self
+        tabBar.onExpandedChange = { [weak self] in
+            self?.updateTabBarFrame()
+        }
     }
 
     @available(*, unavailable)
@@ -113,12 +116,20 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         ])
         #if compiler(>=6.4)
         if #available(iOS 27.1, *) {
-            // 提前创建两侧 guide，保证姿态切换后的首次布局即可拿到已求解的系统轨道。
-            for edge in [NSDirectionalRectEdge.leading, .trailing] {
-                _ = verticalBarGuide(on: edge)
-            }
             registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (controller: TabBarController, _: UITraitCollection) in
                 controller.view.setNeedsLayout()
+            }
+        }
+        #endif
+    }
+
+    override open func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *), let window = view.window {
+            // 提前创建两侧 guide，保证姿态切换后的首次布局即可拿到已求解的系统轨道。
+            for edge in [NSDirectionalRectEdge.leading, .trailing] {
+                _ = Self.verticalBarGuide(in: window, on: edge)
             }
         }
         #endif
@@ -366,10 +377,11 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         var required = UIEdgeInsets.zero
         if !isTabBarHidden {
             if tabBar.isVertical {
-                if tabBar.frame.midX < view.bounds.midX {
-                    required.left = max(0, tabBar.frame.maxX + 8 - view.safeAreaInsets.left)
+                // 按轨道宽度计算，长按展开时覆盖在内容之上，不改变 insets。
+                if tabBar.isOnRightEdge {
+                    required.right = max(0, view.bounds.maxX - (tabBar.frame.maxX - TabBarView.verticalBarExtent) + 8 - view.safeAreaInsets.right)
                 } else {
-                    required.right = max(0, view.bounds.maxX - tabBar.frame.minX + 8 - view.safeAreaInsets.right)
+                    required.left = max(0, tabBar.frame.minX + TabBarView.verticalBarExtent + 8 - view.safeAreaInsets.left)
                 }
             } else {
                 required.bottom = max(0, view.bounds.maxY - tabBar.frame.minY - view.safeAreaInsets.bottom)
@@ -407,13 +419,16 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         if let rail = verticalBarRail {
             // 系统纵向栏自上而下为灵动岛、状态栏、Toolbar、TabBar（HIG），TabBar 贴轨道底部；
             // 轨道放不下全部 item 时由 TabBarView 内部纵向滚动。
+            // 长按展开时向屏幕内侧加宽，贴轨道的一侧不动。
             tabBar.isVertical = true
             let height = min(tabBar.verticalContentHeight, rail.height)
             let isLeft = rail.midX < bounds.midX
+            tabBar.isOnRightEdge = !isLeft
+            let width = tabBar.isExpanded ? max(rail.width, min(tabBar.expandedVerticalWidth, bounds.width - rail.width)) : rail.width
             tabBar.frame = CGRect(
-                x: isTabBarHidden ? (isLeft ? bounds.minX - rail.width : bounds.maxX) : rail.minX,
+                x: isTabBarHidden ? (isLeft ? bounds.minX - width : bounds.maxX) : (isLeft ? rail.minX : rail.maxX - width),
                 y: rail.maxY - height,
-                width: rail.width,
+                width: width,
                 height: height
             )
             return
@@ -456,12 +471,18 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     ///
     /// `verticalBarEdge` 只表示系统偏好的边，需同时拿到非空 layout guide 才使用纵向布局。
     /// 轨道已由系统避开摄像头、状态栏和折叠区域，并与状态栏处于同一列。
+    ///
+    /// guide 取自 window 而非 `view`：外层 `UINavigationController` 会在纵向栏一侧给子控制器追加
+    /// safe area（如分屏左侧时 leading 84pt），`view` 上的 bar guide 会叠在这块 safe area 之后，偏离系统纵向栏所在列。
     private var verticalBarRail: CGRect? {
         #if compiler(>=6.4)
-        if #available(iOS 27.1, *), traitCollection.verticalBarEdge != .unspecified {
+        if #available(iOS 27.1, *), traitCollection.verticalBarEdge != .unspecified, let window = view.window {
             let edge: NSDirectionalRectEdge = traitCollection.verticalBarEdge == .leading ? .leading : .trailing
-            let rail = verticalBarGuide(on: edge).layoutFrame
-            return rail.isEmpty ? nil : rail
+            let windowRail = Self.verticalBarGuide(in: window, on: edge).layoutFrame
+            guard !windowRail.isEmpty else { return nil }
+            let rail = view.convert(windowRail, from: window)
+            // ponytail: 只处理控制器横向铺满 window 的场景；嵌在分栏等局部容器里时轨道可能落在 view 外，退回横向布局。
+            return rail.minX >= view.bounds.minX && rail.maxX <= view.bounds.maxX ? rail : nil
         }
         #endif
         return nil
@@ -472,8 +493,8 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     ///
     /// guide 在首次访问时创建，创建当次 `layoutFrame` 为空，需提前访问一次。
     @available(iOS 27.1, *)
-    private func verticalBarGuide(on edge: NSDirectionalRectEdge) -> UILayoutGuide {
-        view.layoutGuide(for: .bar(onEdge: edge, extent: TabBarView.verticalBarExtent))
+    private static func verticalBarGuide(in window: UIWindow, on edge: NSDirectionalRectEdge) -> UILayoutGuide {
+        window.layoutGuide(for: .bar(onEdge: edge, extent: TabBarView.verticalBarExtent))
     }
     #endif
 

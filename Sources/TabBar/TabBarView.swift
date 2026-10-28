@@ -22,7 +22,7 @@ public protocol TabBarViewDelegate: AnyObject {
     func tabBarView(_ tabBarView: TabBarView, didReselect item: TabBarItem, at index: Int)
     /// 双击了某个 tab。
     func tabBarView(_ tabBarView: TabBarView, didDoubleTap item: TabBarItem, at index: Int)
-    /// 长按了某个 tab。
+    /// 长按了某个 tab。iPhone Duo 纵向布局下长按用于展开显示标题，不回调此方法。
     func tabBarView(_ tabBarView: TabBarView, didLongPress item: TabBarItem, at index: Int)
 }
 
@@ -59,14 +59,30 @@ public final class TabBarView: UIView {
     var isVertical = false {
         didSet {
             guard oldValue != isVertical else { return }
+            isExpanded = false
             invalidateIntrinsicContentSize()
             setNeedsLayout()
         }
     }
 
+    /// 纵向布局时是否位于屏幕右侧，决定展开方向与标题位置。由 `TabBarController` 设置。
+    var isOnRightEdge = false
+
+    /// 纵向布局长按展开中：向屏幕内侧放大并显示标题，松手后收起。
+    private(set) var isExpanded = false
+
+    /// 展开状态变化时调用，由 `TabBarController` 重新计算 frame。
+    var onExpandedChange: (() -> Void)?
+
     /// 纵向布局时完整展示所有 item 所需的高度。
     var verticalContentHeight: CGFloat {
         CGFloat(items.count) * Self.verticalItemHeight + Self.innerInset * 2.0
+    }
+
+    /// 纵向展开后的宽度：轨道宽度 + 最长标题 + 两侧留白。
+    var expandedVerticalWidth: CGFloat {
+        let titleWidth = items.map { TabBarItemContentView.measureSideTitleWidth($0.title) }.max() ?? 0.0
+        return Self.verticalBarExtent + titleWidth + 16.0
     }
 
     /// 代理，接收交互事件。
@@ -153,6 +169,9 @@ public final class TabBarView: UIView {
         tabBarContentView.onNeedsUpdate = { [weak self] transition in
             self?.performUpdate(transition: transition)
         }
+        tabBarContentView.onExpandedChange = { [weak self] expanded in
+            self?.setExpanded(expanded)
+        }
     }
 
     @available(*, unavailable)
@@ -174,6 +193,15 @@ public final class TabBarView: UIView {
     public func setSelectedIndex(_ index: Int, animated: Bool) {
         needsAnimatedSelectionUpdate = animated
         selectedIndex = index
+    }
+
+    private func setExpanded(_ expanded: Bool) {
+        guard isVertical || !expanded, isExpanded != expanded else { return }
+        isExpanded = expanded
+        needsAnimatedSelectionUpdate = true
+        setNeedsLayout()
+        onExpandedChange?()
+        layoutIfNeeded()
     }
 
     // MARK: - 布局
@@ -225,7 +253,9 @@ public final class TabBarView: UIView {
             outerInsets: isVertical
                 ? UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
                 : UIEdgeInsets(top: 0.0, left: frame.origin.x, bottom: 0.0, right: frame.origin.x),
-            isVertical: isVertical
+            isVertical: isVertical,
+            isExpanded: isExpanded,
+            isOnRightEdge: isOnRightEdge
         )
 
         tabBarContentSize = tabBarContentView.update(
@@ -240,10 +270,10 @@ public final class TabBarView: UIView {
         }
 
         scrollView.frame = bounds
-        scrollView.isScrollEnabled = isVertical && tabBarContentSize.height > bounds.height
-        scrollView.clipsToBounds = scrollView.isScrollEnabled
+        scrollView.isScrollEnabled = isVertical && !isExpanded && tabBarContentSize.height > bounds.height
+        scrollView.clipsToBounds = isVertical && tabBarContentSize.height > bounds.height
         scrollView.contentSize = tabBarContentSize
-        if !scrollView.isScrollEnabled {
+        if !scrollView.isScrollEnabled, !isExpanded {
             scrollView.contentOffset = .zero
         }
         tabBarContentView.frame = CGRect(

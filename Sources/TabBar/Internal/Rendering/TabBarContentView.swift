@@ -49,6 +49,10 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         /// TabBarView 在父视图中的外部 insets，用于 LiquidLens 的溢出计算。
         var outerInsets: UIEdgeInsets
         var isVertical: Bool = false
+        /// 纵向长按展开中，item 在图标旁显示标题。
+        var isExpanded: Bool = false
+        /// 纵向布局位于屏幕右侧，展开时标题在图标左侧。
+        var isOnRightEdge: Bool = false
     }
 
     /// 毛玻璃背景容器（iOS 26+ 使用 UIGlassContainerEffect，低版本使用普通 UIView）。
@@ -74,6 +78,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
 
     /// 当手势交互需要触发视图更新时调用（如拖拽切换 tab 时实时更新 lens 位置）。
     var onNeedsUpdate: ((ViewTransition) -> Void)?
+    /// 纵向长按展开 / 收起时调用。
+    var onExpandedChange: ((Bool) -> Void)?
 
     /// 拖拽手势状态：起始 X、当前 X、item 宽度、当前悬停的 item id。
     private var selectionGestureState: (startX: CGFloat, currentX: CGFloat, itemWidth: CGFloat, itemId: AnyHashable)?
@@ -107,6 +113,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         // 长按手势：触发上下文菜单
         let contextGesture = UILongPressGestureRecognizer(target: self, action: #selector(onContextGesture(_:)))
         contextGesture.minimumPressDuration = 0.3
+        // 与 TabSelectionRecognizer 同时识别，否则后者按下即 began 会让长按失败。
+        contextGesture.delegate = self
         containerView.addGestureRecognizer(contextGesture)
     }
 
@@ -324,13 +332,18 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
             // 新建的视图不使用动画
             let itemTransition: ViewTransition = isNew ? .immediate : transition
 
-            // Duo 纵向控制栏只展示图标，横向 TabBar 保留标题。
+            // Duo 纵向控制栏只展示图标，长按展开时标题显示在图标内侧；横向 TabBar 保留标题。
             var displayItem = item.tabBarItem
+            var sideTitle: TabBarItemContentView.SideTitle?
             if params.isVertical {
-                displayItem.title = ""
+                if params.isExpanded {
+                    sideTitle = .init(iconColumnWidth: TabBarView.verticalBarExtent - innerInset * 2.0, isIconOnRight: params.isOnRightEdge)
+                } else {
+                    displayItem.title = ""
+                }
             }
-            itemView.update(item: displayItem, theme: params.theme, isSelected: false, availableSize: itemSize, transition: itemTransition)
-            selectedView.update(item: displayItem, theme: params.theme, isSelected: true, availableSize: itemSize, transition: itemTransition)
+            itemView.update(item: displayItem, theme: params.theme, isSelected: false, availableSize: itemSize, sideTitle: sideTitle, transition: itemTransition)
+            selectedView.update(item: displayItem, theme: params.theme, isSelected: true, availableSize: itemSize, sideTitle: sideTitle, transition: itemTransition)
             itemView.isAccessibilityElement = true
             itemView.accessibilityIdentifier = item.tabBarItem.accessibilityIdentifier
             itemView.accessibilityLabel = item.tabBarItem.title.isEmpty ? item.tabBarItem.id : item.tabBarItem.title
@@ -397,8 +410,12 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
 
     // MARK: - 手势处理
 
-    /// 长按手势处理：触发上下文菜单。
+    /// 长按手势处理：纵向布局展开显示标题，横向布局触发上下文菜单。
     @objc private func onContextGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if params?.isVertical == true {
+            handleVerticalExpansion(recognizer)
+            return
+        }
         guard case .began = recognizer.state else { return }
         let point = recognizer.location(in: containerView)
         guard let itemId = itemId(at: point) else { return }
@@ -412,6 +429,39 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         item.contextAction?(recognizer, itemView.contextContainerView)
     }
 
+    /// 纵向长按：展开显示标题，手指上下滑动时选中指示跟随，松手选中所在 item 并收起（对齐系统纵向 TabBar）。
+    private func handleVerticalExpansion(_ recognizer: UILongPressGestureRecognizer) {
+        switch recognizer.state {
+        case .began, .changed:
+            if case .began = recognizer.state {
+                tabSelectionRecognizer?.state = .cancelled
+            }
+            let point = recognizer.location(in: containerView)
+            guard let itemId = itemId(at: point) else { return }
+            let itemHeight = TabBarView.verticalItemHeight
+            let lensY = point.y - itemHeight * 0.5 - 4.0
+            selectionGestureState = (lensY, lensY, itemHeight, itemId)
+            if case .began = recognizer.state {
+                onExpandedChange?(true)
+            } else {
+                onNeedsUpdate?(.immediate)
+            }
+        case .ended:
+            let itemId = itemId(at: recognizer.location(in: containerView))
+            selectionGestureState = nil
+            // 松手在当前选中项上只收起，不触发重选。
+            if let index = items.firstIndex(where: { $0.id == itemId }), index != params?.selectedIndex {
+                items[index].action(true)
+            }
+            onExpandedChange?(false)
+        case .cancelled, .failed:
+            selectionGestureState = nil
+            onExpandedChange?(false)
+        default:
+            break
+        }
+    }
+
     /// Tab 选择手势处理：支持按下 → 拖拽 → 松手切换，以及双击检测。
     ///
     /// 双击检测机制：
@@ -419,7 +469,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
     /// 2. timer 窗口内再次点击同一 tab → 触发 doubleTapAction
     /// 3. timer 超时 → 清除 overrideSelectedItemId，恢复正常选中状态
     @objc private func onTabSelectionGesture(_ recognizer: TabSelectionRecognizer) {
-        guard !items.isEmpty else { return }
+        // 纵向展开期间由长按手势接管选中指示。
+        guard !items.isEmpty, params?.isExpanded != true else { return }
         switch recognizer.state {
         case .began:
             if let itemId = itemId(at: recognizer.location(in: self)), let itemView = itemContentViews[itemId] {
@@ -539,6 +590,22 @@ final class TabBarItemContentView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// 纵向展开时的标题布局：图标固定在贴轨道一侧的列内，标题在内侧。
+    struct SideTitle {
+        /// 图标列宽度，与收起时的 item 宽度一致，保证展开前后图标不动。
+        var iconColumnWidth: CGFloat
+        var isIconOnRight: Bool
+    }
+
+    private static let sideTitleFont = UIFont.systemFont(ofSize: 15.0, weight: .semibold)
+    private static let sideTitleSpacing: CGFloat = 4.0
+
+    /// 纵向展开时标题所需宽度（含与图标的间距）。
+    static func measureSideTitleWidth(_ title: String) -> CGFloat {
+        guard !title.isEmpty else { return 0.0 }
+        return ceil((title as NSString).size(withAttributes: [.font: sideTitleFont]).width) + sideTitleSpacing
+    }
+
     /// 测量 item 的自然宽度（不受容器约束）。
     ///
     /// 无标题时返回固定 48pt，有标题时根据文字宽度 + 左右 padding（10pt × 2）计算。
@@ -554,8 +621,17 @@ final class TabBarItemContentView: UIView {
     ///
     /// 根据 `item.animation` 是否为 nil 自动切换 Lottie 动画模式和 UIImage 模式。
     /// 两种模式互斥：切换时会移除另一种模式的视图。
-    func update(item: TabBarItem, theme: TabBarStyle, isSelected: Bool, availableSize: CGSize, transition: ViewTransition) {
-        let hasTitle = !item.title.isEmpty
+    func update(item: TabBarItem, theme: TabBarStyle, isSelected: Bool, availableSize: CGSize, sideTitle: SideTitle? = nil, transition: ViewTransition) {
+        // 标题在图标下方时图标上移；侧边标题或无标题时图标垂直居中。
+        let hasTitle = !item.title.isEmpty && sideTitle == nil
+        let iconCenterX: CGFloat
+        if let sideTitle {
+            iconCenterX = sideTitle.isIconOnRight
+                ? availableSize.width - sideTitle.iconColumnWidth * 0.5
+                : sideTitle.iconColumnWidth * 0.5
+        } else {
+            iconCenterX = availableSize.width * 0.5
+        }
 
         // 图标：Lottie 动画模式 vs UIImage 模式
         if let animation = item.animation {
@@ -581,7 +657,7 @@ final class TabBarItemContentView: UIView {
             iconView.update(name: animation.name, size: iconSize, color: color)
             // 有标题时图标上移，无标题时垂直居中
             let iconY = hasTitle ? -4.0 : floor((availableSize.height - iconSize.height) * 0.5)
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor(iconCenterX - iconSize.width * 0.5), y: iconY), size: iconSize)
                 .offsetBy(dx: animation.offset.x, dy: animation.offset.y)
             transition.setFrame(view: iconView, frame: iconFrame)
         } else {
@@ -608,12 +684,26 @@ final class TabBarItemContentView: UIView {
             iconView.tintColor = isSelected ? theme.selectedIconColor : theme.iconColor
             let imgSize = img?.size ?? .zero
             let iconY = hasTitle ? 3.0 : floor((availableSize.height - imgSize.height) * 0.5)
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - imgSize.width) * 0.5), y: iconY), size: imgSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor(iconCenterX - imgSize.width * 0.5), y: iconY), size: imgSize)
             transition.setFrame(view: iconView, frame: iconFrame)
         }
 
         // 标题
-        if hasTitle {
+        if let sideTitle, !item.title.isEmpty {
+            titleLabel.attributedText = NSAttributedString(string: item.title, attributes: [
+                .font: Self.sideTitleFont,
+                .foregroundColor: isSelected ? theme.selectedTextColor : theme.textColor,
+            ])
+            let titleWidth = max(0.0, availableSize.width - sideTitle.iconColumnWidth - Self.sideTitleSpacing)
+            let titleHeight = ceil(titleLabel.sizeThatFits(CGSize(width: titleWidth, height: 100.0)).height)
+            let titleX = sideTitle.isIconOnRight ? 0.0 : sideTitle.iconColumnWidth + Self.sideTitleSpacing
+            titleLabel.textAlignment = sideTitle.isIconOnRight ? .right : .left
+            if titleLabel.superview == nil {
+                contextContainerView.contentView.addSubview(titleLabel)
+            }
+            titleLabel.frame = CGRect(x: titleX, y: floor((availableSize.height - titleHeight) * 0.5), width: titleWidth, height: titleHeight)
+            titleLabel.isHidden = false
+        } else if hasTitle {
             let titleColor = isSelected ? theme.selectedTextColor : theme.textColor
             titleLabel.attributedText = NSAttributedString(string: item.title, attributes: [
                 .font: UIFont.systemFont(ofSize: 10.0, weight: .semibold),
@@ -621,6 +711,7 @@ final class TabBarItemContentView: UIView {
             ])
             let titleSize = titleLabel.sizeThatFits(CGSize(width: availableSize.width, height: 100.0))
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - 8.0 - titleSize.height), size: titleSize)
+            titleLabel.textAlignment = .natural
             if titleLabel.superview == nil {
                 contextContainerView.contentView.addSubview(titleLabel)
             }
@@ -651,7 +742,7 @@ final class TabBarItemContentView: UIView {
             )
             // 角标定位在图标右上方
             let contentWidth: CGFloat = 25.0
-            let badgeFrame = CGRect(origin: CGPoint(x: floor(availableSize.width / 2.0) + contentWidth - badgeSize.width - 1.0, y: 5.0), size: badgeSize)
+            let badgeFrame = CGRect(origin: CGPoint(x: floor(iconCenterX) + contentWidth - badgeSize.width - 1.0, y: 5.0), size: badgeSize)
             transition.setFrame(view: bv, frame: badgeFrame)
         } else if let bv = badgeView {
             badgeView = nil
