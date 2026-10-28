@@ -90,7 +90,8 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         super.init(nibName: nil, bundle: nil)
         tabBar.delegate = self
         tabBar.onExpandedChange = { [weak self] in
-            self?.updateTabBarFrame()
+            // 与 TabBarView 内部展开动画使用同一 spring，避免外框尺寸突变。
+            self?.updateTabBarFrame(transition: .spring(duration: 0.4))
         }
     }
 
@@ -377,11 +378,12 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
         var required = UIEdgeInsets.zero
         if !isTabBarHidden {
             if tabBar.isVertical {
-                // 按轨道宽度计算，长按展开时覆盖在内容之上，不改变 insets。
-                if tabBar.isOnRightEdge {
-                    required.right = max(0, view.bounds.maxX - (tabBar.frame.maxX - TabBarView.verticalBarExtent) + 8 - view.safeAreaInsets.right)
+                // 按轨道宽度计算（展开时以轨道为中心），长按展开覆盖在内容之上，不改变 insets。
+                let railHalfWidth = TabBarView.verticalBarExtent * 0.5
+                if tabBar.frame.midX < view.bounds.midX {
+                    required.left = max(0, tabBar.frame.midX + railHalfWidth + 8 - view.safeAreaInsets.left)
                 } else {
-                    required.left = max(0, tabBar.frame.minX + TabBarView.verticalBarExtent + 8 - view.safeAreaInsets.left)
+                    required.right = max(0, view.bounds.maxX - (tabBar.frame.midX - railHalfWidth) + 8 - view.safeAreaInsets.right)
                 }
             } else {
                 required.bottom = max(0, view.bounds.maxY - tabBar.frame.minY - view.safeAreaInsets.bottom)
@@ -414,23 +416,23 @@ open class TabBarController: UIViewController, TabBarViewDelegate {
     /// - `bottomInset <= 28`（SE / iOS 26 iPhone / iPad mini 等）→ sideInset = 20pt，胶囊适当收窄
     /// - `bottomInset > 28`（iOS 26 以下 Face ID iPhone，34pt）→ sideInset = 12pt，胶囊更宽
     /// 底部空间大时胶囊可以更宽，底部空间小时适当收窄以保持视觉平衡。
-    private func updateTabBarFrame() {
+    private func updateTabBarFrame(transition: ViewTransition = .immediate) {
         let bounds = view.bounds
         if let rail = verticalBarRail {
             // 系统纵向栏自上而下为灵动岛、状态栏、Toolbar、TabBar（HIG），TabBar 贴轨道底部；
             // 轨道放不下全部 item 时由 TabBarView 内部纵向滚动。
-            // 长按展开时向屏幕内侧加宽，贴轨道的一侧不动。
+            // 长按展开时以轨道中线为中心加宽、贴轨道底部向上长高，不超出 view。
             tabBar.isVertical = true
-            let height = min(tabBar.verticalContentHeight, rail.height)
+            let height = min(tabBar.verticalContentHeight, tabBar.isExpanded ? rail.maxY - bounds.minY : rail.height)
             let isLeft = rail.midX < bounds.midX
-            tabBar.isOnRightEdge = !isLeft
-            let width = tabBar.isExpanded ? max(rail.width, min(tabBar.expandedVerticalWidth, bounds.width - rail.width)) : rail.width
-            tabBar.frame = CGRect(
-                x: isTabBarHidden ? (isLeft ? bounds.minX - width : bounds.maxX) : (isLeft ? rail.minX : rail.maxX - width),
+            let width = tabBar.isExpanded ? min(tabBar.expandedVerticalWidth, bounds.width) : rail.width
+            let x = min(max(rail.midX - width * 0.5, bounds.minX), bounds.maxX - width)
+            transition.setFrame(view: tabBar, frame: CGRect(
+                x: isTabBarHidden ? (isLeft ? bounds.minX - width : bounds.maxX) : x,
                 y: rail.maxY - height,
                 width: width,
                 height: height
-            )
+            ))
             return
         }
         tabBar.isVertical = false

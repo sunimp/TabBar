@@ -65,24 +65,21 @@ public final class TabBarView: UIView {
         }
     }
 
-    /// 纵向布局时是否位于屏幕右侧，决定展开方向与标题位置。由 `TabBarController` 设置。
-    var isOnRightEdge = false
-
-    /// 纵向布局长按展开中：向屏幕内侧放大并显示标题，松手后收起。
+    /// 纵向布局长按展开中：以轨道为中心整体放大并显示标题，松手后收起。
     private(set) var isExpanded = false
 
     /// 展开状态变化时调用，由 `TabBarController` 重新计算 frame。
     var onExpandedChange: (() -> Void)?
 
-    /// 纵向布局时完整展示所有 item 所需的高度。
+    /// 纵向布局时完整展示所有 item 所需的高度；展开时 item 恢复横向高度以容纳标题。
     var verticalContentHeight: CGFloat {
-        CGFloat(items.count) * Self.verticalItemHeight + Self.innerInset * 2.0
+        CGFloat(items.count) * (isExpanded ? Self.itemHeight : Self.verticalItemHeight) + Self.innerInset * 2.0
     }
 
-    /// 纵向展开后的宽度：轨道宽度 + 最长标题 + 两侧留白。
+    /// 纵向展开后的宽度：容纳最宽的「图标 + 标题」item。
     var expandedVerticalWidth: CGFloat {
-        let titleWidth = items.map { TabBarItemContentView.measureSideTitleWidth($0.title) }.max() ?? 0.0
-        return Self.verticalBarExtent + titleWidth + 16.0
+        let itemWidth = items.map { TabBarItemContentView.measureWidth(item: $0) }.max() ?? 0.0
+        return max(Self.verticalBarExtent, itemWidth + Self.innerInset * 2.0)
     }
 
     /// 代理，接收交互事件。
@@ -254,8 +251,7 @@ public final class TabBarView: UIView {
                 ? UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
                 : UIEdgeInsets(top: 0.0, left: frame.origin.x, bottom: 0.0, right: frame.origin.x),
             isVertical: isVertical,
-            isExpanded: isExpanded,
-            isOnRightEdge: isOnRightEdge
+            isExpanded: isExpanded
         )
 
         tabBarContentSize = tabBarContentView.update(
@@ -269,19 +265,21 @@ public final class TabBarView: UIView {
             invalidateIntrinsicContentSize()
         }
 
-        scrollView.frame = bounds
+        // 纵向展开 / 收起时内部容器随外框同步动画；横向保持直接设置。
+        let frameTransition: ViewTransition = isVertical ? transition : .immediate
+        frameTransition.setFrame(view: scrollView, frame: bounds)
         scrollView.isScrollEnabled = isVertical && !isExpanded && tabBarContentSize.height > bounds.height
         scrollView.clipsToBounds = isVertical && tabBarContentSize.height > bounds.height
         scrollView.contentSize = tabBarContentSize
         if !scrollView.isScrollEnabled, !isExpanded {
             scrollView.contentOffset = .zero
         }
-        tabBarContentView.frame = CGRect(
+        frameTransition.setFrame(view: tabBarContentView, frame: CGRect(
             x: floor((bounds.width - tabBarContentSize.width) * 0.5),
             y: isVertical ? 0 : max(0.0, bounds.height - tabBarContentSize.height),
             width: tabBarContentSize.width,
             height: tabBarContentSize.height
-        )
+        ))
     }
 
     // MARK: - 交互处理
