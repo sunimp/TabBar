@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-28
+
 ### 新增
 
 - iPhone Duo 纵向 TabBar 长按以轨道为中心整体放大并显示标题，手指上下滑动切换高亮，松手选中并收起；横向 TabBar 交互不变（#4）。
@@ -13,6 +15,10 @@
 ### 修复
 
 - iPhone Duo 分屏位于左侧时纵向 TabBar 偏离系统纵向栏所在列（#3）。
+
+### 变更
+
+- README 补充 iPhone Duo 展开内屏分屏截图（本 App 位于左侧、右侧）。
 
 ## [0.2.0] - 2026-10-27
 
@@ -37,6 +43,7 @@
 
 - 首个版本：浮动胶囊 TabBar、液态选中效果、角标与 Lottie 图标动画。
 
-[Unreleased]: https://github.com/sunimp/TabBar/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/sunimp/TabBar/compare/0.2.1...HEAD
+[0.2.1]: https://github.com/sunimp/TabBar/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/sunimp/TabBar/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/sunimp/TabBar/releases/tag/0.1.0

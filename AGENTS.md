@@ -29,7 +29,7 @@
 ## 验证
 
 - 姿态切换使用 Xcode Device Hub，不使用 Simulator.app 菜单。
-- 每次 Duo 布局改动，需在 Device Hub 依次验证：闭合（摄像头右上、右下、左上）、展开竖握、展开横握。
+- 每次 Duo 布局改动，需在 Device Hub 依次验证：闭合（摄像头右上、右下、左上）、展开竖握、展开横握、展开横握分屏（本 App 位于左侧、右侧）；纵向时另验证长按展开 / 收起，横向长按交互不变。
 - 本地复现 CI：分别以 `DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer` 与 Xcode 27.1 执行 README「验证」中的命令；只有 27.1 会编译 Duo 代码。
 
 ## 截图与文档
@@ -40,4 +40,6 @@
   - `Screenshots/iphone-duo-open-1.png`：展开内屏横握。
   - `Screenshots/iphone-duo-open-2.png`：展开内屏竖握。
   - `Screenshots/iphone-duo-open-3.png`：半折叠。
+  - `Screenshots/iphone-duo-open-4.png`：展开内屏横握，与其它 App 分屏且本 App 位于右侧。
+  - `Screenshots/iphone-duo-open-5.png`：展开内屏横握，与其它 App 分屏且本 App 位于左侧。
 - Duo 布局变化后重新生成全部 Duo 截图，并同步更新 `README.md` 的 Demo 截图表与「iPhone Duo」一节。

@@ -25,7 +25,7 @@ https://github.com/sunimp/TabBar.git
 或在 `Package.swift` 中添加：
 
 ```swift
-.package(url: "https://github.com/sunimp/TabBar.git", from: "0.2.0")
+.package(url: "https://github.com/sunimp/TabBar.git", from: "0.2.1")
 ```
 
 ## 快速开始
@@ -88,7 +88,11 @@ iPhone Duo（Xcode Device Hub）：
 | --- |
 | <img src="Screenshots/iphone-duo-open-3.png" alt="iPhone Duo 半折叠" width="390"> |
 
-闭合外屏：TabBar 纵向位于摄像头所在列，摄像头在上时贴轨道底部、在下时位于摄像头上方。展开内屏横握及半折叠：会话列表与详情双栏，TabBar 位于状态栏所在列。展开内屏竖握：TabBar 回到底部横向。
+| 展开内屏 · 分屏右侧 | 展开内屏 · 分屏左侧 |
+| --- | --- |
+| <img src="Screenshots/iphone-duo-open-4.png" alt="iPhone Duo 展开内屏分屏右侧" width="390"> | <img src="Screenshots/iphone-duo-open-5.png" alt="iPhone Duo 展开内屏分屏左侧" width="390"> |
+
+闭合外屏：TabBar 纵向位于摄像头所在列，摄像头在上时贴轨道底部、在下时位于摄像头上方。展开内屏横握及半折叠：会话列表与详情双栏，TabBar 位于状态栏所在列。展开内屏分屏：TabBar 位于本 App 一侧的系统纵向栏列，与另一侧 App 的纵向栏对称。展开内屏竖握：TabBar 回到底部横向。
 
 ## 验证
 
