@@ -53,10 +53,11 @@ controller.setViewControllers(
 | 姿态 | TabBar 布局 |
 | --- | --- |
 | 闭合外屏（任意方向） | 纵向，位于系统纵向栏轨道底部，与摄像头、状态栏同列 |
-| 展开内屏横握 | 纵向，位于屏幕侧边，与状态栏同列 |
+| 展开内屏横握 | 纵向，位于屏幕侧边，与状态栏同列；分屏时位于本 App 一侧的系统纵向栏列 |
 | 展开内屏竖握 | 横向，位于底部 |
 
-- 纵向与否、所在侧和轨道 frame 均来自系统：`UITraitCollection.verticalBarEdge` 与 `UIView.layoutGuide(for: .bar(onEdge:extent:))`。轨道宽 48pt，与系统纵向栏按钮一致；纵向时只显示图标。
+- 纵向与否、所在侧和轨道 frame 均来自系统：`UITraitCollection.verticalBarEdge` 与 window 上的 `UIView.layoutGuide(for: .bar(onEdge:extent:))`。轨道宽 48pt，与系统纵向栏按钮一致；纵向时只显示图标。
+- 纵向时长按以轨道为中心整体放大，item 恢复「图标 + 标题」样式，上下滑动切换高亮，松手选中并收起；展开覆盖在内容之上，不改变 safe area，也不回调 `didLongPress`。横向布局交互不受影响。
 - 横向布局按 `reservedRegions(kind:)` 避开摄像头遮挡和折叠区域。
 - TabBar 通过子控制器的 `additionalSafeAreaInsets` 避让；内容请约束到 `safeAreaLayoutGuide`，不要贴 `view` 边缘。
 - 双栏布局推荐 `UISplitViewController`。Demo 的聊天、设置仅在 Duo 展开内屏（横纵 size class 均为 regular）显示列表 + 详情双栏；其它 iPhone 与 Duo 外屏为单栏，详情使用系统 push/pop，TabBar 随前一页一起移出。

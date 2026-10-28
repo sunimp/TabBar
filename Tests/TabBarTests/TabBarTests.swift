@@ -54,6 +54,19 @@ private func descendants(of view: UIView) -> [UIView] {
         }
     }
     #expect(activated == [1, 1, 1])
+
+    // 纵向长按展开：item 恢复横向高度并显示标题；收起后标题再次隐藏。
+    let expandedSize = content.update(items: items,
+                                      params: .init(theme: .dark, selectedIndex: 1, outerInsets: .zero, isVertical: true, isExpanded: true),
+                                      availableSize: CGSize(width: 80, height: 300),
+                                      transition: .immediate)
+    #expect(expandedSize.height == 176)
+    #expect(descendants(of: content).compactMap { $0 as? UILabel }.allSatisfy { !$0.isHidden && $0.alpha == 1 })
+    _ = content.update(items: items,
+                       params: .init(theme: .dark, selectedIndex: 1, outerInsets: .zero, isVertical: true),
+                       availableSize: CGSize(width: TabBarView.verticalBarExtent, height: 300),
+                       transition: .immediate)
+    #expect(descendants(of: content).compactMap { $0 as? UILabel }.allSatisfy { $0.isHidden })
 }
 
 @MainActor

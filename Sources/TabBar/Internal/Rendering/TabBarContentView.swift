@@ -49,6 +49,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         /// TabBarView 在父视图中的外部 insets，用于 LiquidLens 的溢出计算。
         var outerInsets: UIEdgeInsets
         var isVertical: Bool = false
+        /// 纵向长按展开中：item 恢复横向样式（图标 + 下方标题）纵向排列。
+        var isExpanded: Bool = false
     }
 
     /// 毛玻璃背景容器（iOS 26+ 使用 UIGlassContainerEffect，低版本使用普通 UIView）。
@@ -74,6 +76,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
 
     /// 当手势交互需要触发视图更新时调用（如拖拽切换 tab 时实时更新 lens 位置）。
     var onNeedsUpdate: ((ViewTransition) -> Void)?
+    /// 纵向长按展开 / 收起时调用。
+    var onExpandedChange: ((Bool) -> Void)?
 
     /// 拖拽手势状态：起始 X、当前 X、item 宽度、当前悬停的 item id。
     private var selectionGestureState: (startX: CGFloat, currentX: CGFloat, itemWidth: CGFloat, itemId: AnyHashable)?
@@ -107,6 +111,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         // 长按手势：触发上下文菜单
         let contextGesture = UILongPressGestureRecognizer(target: self, action: #selector(onContextGesture(_:)))
         contextGesture.minimumPressDuration = 0.3
+        // 纵向布局需与 TabSelectionRecognizer 同时识别，否则后者按下即 began 会让长按失败；横向由 delegate 拦下，保持原样。
+        contextGesture.delegate = self
         containerView.addGestureRecognizer(contextGesture)
     }
 
@@ -123,9 +129,17 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         tabSelectionRecognizer?.require(toFail: scrollRecognizer)
     }
 
-    /// 允许 TabSelectionRecognizer 和 UILongPressGestureRecognizer 同时识别。
+    /// 长按只在纵向布局参与识别（展开显示标题），横向布局保持原有交互不受影响。
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer is UILongPressGestureRecognizer else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+        return params?.isVertical == true
+    }
+
+    /// 纵向布局允许 TabSelectionRecognizer 和 UILongPressGestureRecognizer 同时识别。
     func gestureRecognizer(_: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer) -> Bool {
-        true
+        params?.isVertical == true
     }
 
     // MARK: - 更新入口
@@ -157,7 +171,7 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         overrideUserInterfaceStyle = params.theme.isDark ? .dark : .light
 
         let innerInset: CGFloat = 4.0
-        let itemHeight = params.isVertical ? TabBarView.verticalItemHeight : TabBarView.itemHeight
+        let itemHeight = params.isVertical && !params.isExpanded ? TabBarView.verticalItemHeight : TabBarView.itemHeight
 
         // 1. 计算每个 item 的宽度
         let (itemWidths, totalItemsWidth) = calculateItemWidths(
@@ -324,9 +338,9 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
             // 新建的视图不使用动画
             let itemTransition: ViewTransition = isNew ? .immediate : transition
 
-            // Duo 纵向控制栏只展示图标，横向 TabBar 保留标题。
+            // Duo 纵向控制栏只展示图标，长按展开时与横向 TabBar 一样显示标题。
             var displayItem = item.tabBarItem
-            if params.isVertical {
+            if params.isVertical, !params.isExpanded {
                 displayItem.title = ""
             }
             itemView.update(item: displayItem, theme: params.theme, isSelected: false, availableSize: itemSize, transition: itemTransition)
@@ -397,8 +411,12 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
 
     // MARK: - 手势处理
 
-    /// 长按手势处理：触发上下文菜单。
+    /// 长按手势处理：纵向布局展开显示标题，横向布局触发上下文菜单。
     @objc private func onContextGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if params?.isVertical == true {
+            handleVerticalExpansion(recognizer)
+            return
+        }
         guard case .began = recognizer.state else { return }
         let point = recognizer.location(in: containerView)
         guard let itemId = itemId(at: point) else { return }
@@ -412,6 +430,43 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
         item.contextAction?(recognizer, itemView.contextContainerView)
     }
 
+    /// 纵向长按：整体放大并显示标题，手指上下滑动时选中指示跟随，松手选中所在 item 并收起（对齐系统纵向 TabBar）。
+    private func handleVerticalExpansion(_ recognizer: UILongPressGestureRecognizer) {
+        let itemHeight = TabBarView.itemHeight
+        switch recognizer.state {
+        case .began:
+            tabSelectionRecognizer?.state = .cancelled
+            // 先按收起时的布局确定按下的 item，展开后再把选中指示对齐到它的新位置。
+            guard let itemId = itemId(at: recognizer.location(in: containerView)) else { return }
+            selectionGestureState = nil
+            onExpandedChange?(true)
+            guard let itemView = itemContentViews[itemId] else { return }
+            let lensY = itemView.frame.minY - 4.0
+            selectionGestureState = (lensY, lensY, itemHeight, itemId)
+            onNeedsUpdate?(.spring(duration: 0.4))
+        case .changed:
+            let point = recognizer.location(in: containerView)
+            guard let itemId = itemId(at: point) else { return }
+            let lensY = point.y - itemHeight * 0.5 - 4.0
+            selectionGestureState = (lensY, lensY, itemHeight, itemId)
+            onNeedsUpdate?(.immediate)
+        case .ended:
+            // 展开后 item 位置会上移，以按下 / 滑动时记录的 item 为准，避免松手落到相邻项。
+            let itemId = selectionGestureState?.itemId
+            selectionGestureState = nil
+            // 松手在当前选中项上只收起，不触发重选。
+            if let index = items.firstIndex(where: { $0.id == itemId }), index != params?.selectedIndex {
+                items[index].action(true)
+            }
+            onExpandedChange?(false)
+        case .cancelled, .failed:
+            selectionGestureState = nil
+            onExpandedChange?(false)
+        default:
+            break
+        }
+    }
+
     /// Tab 选择手势处理：支持按下 → 拖拽 → 松手切换，以及双击检测。
     ///
     /// 双击检测机制：
@@ -419,7 +474,8 @@ final class TabBarContentView: UIView, UIGestureRecognizerDelegate {
     /// 2. timer 窗口内再次点击同一 tab → 触发 doubleTapAction
     /// 3. timer 超时 → 清除 overrideSelectedItemId，恢复正常选中状态
     @objc private func onTabSelectionGesture(_ recognizer: TabSelectionRecognizer) {
-        guard !items.isEmpty else { return }
+        // 纵向展开期间由长按手势接管选中指示。
+        guard !items.isEmpty, params?.isExpanded != true else { return }
         switch recognizer.state {
         case .began:
             if let itemId = itemId(at: recognizer.location(in: self)), let itemView = itemContentViews[itemId] {
@@ -625,9 +681,14 @@ final class TabBarItemContentView: UIView {
                 contextContainerView.contentView.addSubview(titleLabel)
             }
             titleLabel.frame = titleFrame
+            // 纵向展开 / 收起时标题淡入淡出；横向标题常驻，alpha 恒为 1。
             titleLabel.isHidden = false
-        } else {
-            titleLabel.isHidden = true
+            transition.animateView { self.titleLabel.alpha = 1.0 }
+        } else if !titleLabel.isHidden {
+            transition.animateView({ self.titleLabel.alpha = 0.0 }, completion: { [weak self] _ in
+                guard let self, self.titleLabel.alpha == 0.0 else { return }
+                self.titleLabel.isHidden = true
+            })
         }
 
         // 角标
